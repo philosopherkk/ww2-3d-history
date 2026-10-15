@@ -152,7 +152,7 @@ export function FlatMap() {
                 <button
                   key={c.id}
                   type="button"
-                  className={`map-pin map-pin-country ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`}
+                  className={`map-pin map-pin-country ${point.provenance === 'anchor' ? 'map-pin-anchor' : 'map-pin-estimated'} ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`}
                   style={{
                     left: `${x * 100}%`,
                     top: `${y * 100}%`,
@@ -233,6 +233,8 @@ export function FlatMap() {
         <div className="globe-legend">
           <span className="leg leg-country">{t('legCountryOnMap')}</span>
           <span className="leg leg-incident">{t('legIncidentOnMap')}</span>
+          <span className="leg">● {t('seriesAnchor')}</span>
+          <span className="leg">◐ {t('seriesInterpolated')}</span>
           <span className="leg">{t('dragHint')}</span>
         </div>
       </div>

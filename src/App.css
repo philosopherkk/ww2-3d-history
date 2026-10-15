@@ -651,6 +651,54 @@ select {
   margin-left: 0.2rem;
 }
 
+.edu-footer {
+  padding: 0.4rem 1.1rem 0.55rem;
+  border-top: 1px solid var(--line);
+  background: rgba(10, 16, 28, 0.9);
+  font-size: 0.75rem;
+}
+
+.series-chart {
+  margin: 0.45rem 0 0.2rem;
+}
+
+.series-chart svg {
+  width: 100%;
+  height: 4.2rem;
+  background: rgba(8, 12, 20, 0.35);
+}
+
+.series-dashed {
+  fill: none;
+  stroke: rgba(232, 226, 212, 0.45);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+
+.series-anchor {
+  fill: #f0e6c8;
+  stroke: #c4a35a;
+  stroke-width: 0.6;
+}
+
+.series-interp {
+  fill: rgba(232, 226, 212, 0.25);
+  stroke: rgba(232, 226, 212, 0.45);
+  stroke-width: 0.6;
+}
+
+.series-legend {
+  display: flex;
+  gap: 0.8rem;
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+}
+
+.map-pin-estimated {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
 .metric-value {
   font-size: 1.05rem;
 }

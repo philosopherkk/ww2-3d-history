@@ -1,3 +1,5 @@
+import { adaptIncident } from '../data/evidenceAdapt'
+import { EvidenceBadge } from '../shared/evidence'
 import { Localized } from './Localized'
 import { incidentsVisible, yearFromFraction } from '../data/selectors'
 import { useT } from '../shared/i18n/translate'
@@ -41,7 +43,10 @@ export function Timeline() {
                 <span className="inc-title">
                   <Localized value={inc.title} />
                 </span>
-                {inc.certainty === 'unsure' && <span className="badge">unsure</span>}
+                <EvidenceBadge
+                  level={adaptIncident(inc).level}
+                  storedUnsure={inc.certainty === 'unsure'}
+                />
                 {inc.year < 1939 && <span className="badge prelude">{t('prelude')}</span>}
               </button>
             </li>

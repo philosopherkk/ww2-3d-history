@@ -122,6 +122,7 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
   const color =
     country.side === 'axis' ? '#c45c3a' : country.side === 'allies' ? '#3a7ec4' : '#8a8a6a'
   const unsure = point.certainty === 'unsure'
+  const estimatedPoint = point.provenance === 'interpolated' || point.provenance === 'held'
   const showLabel = selected || hovered
   const accent = unsure ? '#c4a03a' : color
 
@@ -156,6 +157,8 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
           emissiveIntensity={selected ? 0.4 : hovered ? 0.22 : 0.08}
           roughness={0.55}
           metalness={0.1}
+          transparent={estimatedPoint}
+          opacity={estimatedPoint ? 0.55 : 1}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -349,6 +352,8 @@ function SelectionHud() {
           <span className="leg leg-country">{t('legCountrySurface')}</span>
           <span className="leg leg-incident">{t('legIncidentSurface')}</span>
           <span className="leg">{t('amberUnsure')}</span>
+          <span className="leg">● {t('seriesAnchor')}</span>
+          <span className="leg">◐ {t('seriesInterpolated')}</span>
         </div>
         <p className="globe-hint">{t('globeHint')}</p>
       </div>

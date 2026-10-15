@@ -147,6 +147,9 @@ const enSource = {
   statusPrelude: ' · Asian/European prelude (pre-Sep 1939)',
   statusScrubber: ' · scrubber {date}',
   statusUnsure: ' · unsure',
+  seriesLegend: 'Metric series. Solid dots are anchors. Dashed lighter dots are interpolated or held.',
+  seriesAnchor: 'Anchor (solid)',
+  seriesInterpolated: 'Interpolated or held (dashed, lighter)',
 } as const
 
 export type MessageKey = keyof typeof enSource

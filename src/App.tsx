@@ -10,6 +10,7 @@ import './App.css'
 
 export default function App() {
   const mapMode = useAppStore((s) => s.mapMode)
+  const setShowSources = useAppStore((s) => s.setShowSources)
 
   return (
     <div className="app">
@@ -22,6 +23,11 @@ export default function App() {
           <DetailPanel />
         </div>
       </main>
+      <footer className="edu-footer">
+        <button type="button" className="linkish" onClick={() => setShowSources(true)}>
+          數字多為教學用概估，非官方認證統計 / Figures are educational estimates, not certified statistics.
+        </button>
+      </footer>
       <SourcesModal />
     </div>
   )

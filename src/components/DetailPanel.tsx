@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { adaptIncident, adaptMetricPoint, adaptPerson, metricStoredUnsure } from '../data/evidenceAdapt'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { incidentExternalLinks } from '../data/incidentLinks'
 import {
@@ -22,8 +24,11 @@ import {
 import type { DetailLevel, MetricKey } from '../data/types'
 import { formatNumber } from '../shared/i18n/format'
 import { useT } from '../shared/i18n/translate'
+import type { Measured } from '../shared/evidence/types'
+import { EvidenceBadge, SourcePanel } from '../shared/evidence'
 import { useAppStore } from '../state/appStore'
 import { Localized } from './Localized'
+import { SeriesChart } from './SeriesChart'
 
 function ExtLinks({ links }: { links: ExternalLink[] }) {
   return (
@@ -59,6 +64,10 @@ export function DetailPanel() {
   const selectPerson = useAppStore((s) => s.selectPerson)
   const setTime = useAppStore((s) => s.setTime)
   const setPlaying = useAppStore((s) => s.setPlaying)
+  const selectionKey = `${countryId ?? ''}|${incidentId ?? ''}|${personId ?? ''}`
+  const [panel, setPanel] = useState<{ key: string; measured: Measured | null }>({ key: '', measured: null })
+  const evidence = panel.key === selectionKey ? panel.measured : null
+  const setEvidence = (measured: Measured | null) => setPanel({ key: selectionKey, measured })
 
   const fracYear = yearFromFraction(time)
   const dateLabel = dateLabelFromFraction(time)
@@ -83,9 +92,12 @@ export function DetailPanel() {
           </button>
         </div>
         <p className="meta">
-          <Localized value={person.role} />
-          {person.certainty === 'unsure' ? ' · unsure' : ''} · {t('contextAt', { date: dateLabel })}
+          <Localized value={person.role} /> · {t('contextAt', { date: dateLabel })}
         </p>
+        <p>
+          <EvidenceBadge level={adaptPerson(person).level} onClick={() => setEvidence(adaptPerson(person))} />
+        </p>
+        {evidence ? <SourcePanel measured={evidence} onClose={() => setEvidence(null)} /> : null}
         <h3>{t('background')}</h3>
         <p>
           <Localized value={personBackground(person, detail)} />
@@ -148,6 +160,14 @@ export function DetailPanel() {
           </button>
         </div>
         <p className="meta">{brief.statusLine}</p>
+        <p>
+          <EvidenceBadge
+            level={adaptIncident(incident).level}
+            storedUnsure={incident.certainty === 'unsure'}
+            onClick={() => setEvidence(adaptIncident(incident))}
+          />
+        </p>
+        {evidence ? <SourcePanel measured={evidence} onClose={() => setEvidence(null)} /> : null}
         <p className="marker-explainer">{brief.markerExplainer}</p>
         <h3>{t('backgroundAt', { date: dateLabel })}</h3>
         <p>
@@ -262,10 +282,15 @@ export function DetailPanel() {
             </strong>
           </p>
           <p className="meta">
-            {t('pointLabel')}: {pointStamp(point)} · {t('certainty')}:{' '}
-            <span className={point.certainty === 'unsure' ? 'unsure' : ''}>{point.certainty}</span>
-            {point.provenance ? ` · ${point.provenance}` : ''}
+            {t('pointLabel')}: {pointStamp(point)}{' '}
+            <EvidenceBadge
+              level={adaptMetricPoint(point, metric).level}
+              storedUnsure={metricStoredUnsure(point)}
+              onClick={() => setEvidence(adaptMetricPoint(point, metric))}
+            />
           </p>
+          <SeriesChart points={country!.metrics[metric]} />
+          {evidence ? <SourcePanel measured={evidence} onClose={() => setEvidence(null)} /> : null}
           {point.note && (
             <p className="note">
               <Localized value={point.note} />
@@ -286,9 +311,12 @@ export function DetailPanel() {
               <span>
                 {p ? (
                   <>
-                    {formatNumber(p.value)} {p.unit}
-                    {p.certainty === 'unsure' ? ' (unsure)' : ''}
-                    {p.provenance === 'interpolated' ? ' ~' : ''}
+                    {formatNumber(p.value)} {p.unit}{' '}
+                    <EvidenceBadge
+                      level={adaptMetricPoint(p, m).level}
+                      storedUnsure={metricStoredUnsure(p)}
+                      onClick={() => setEvidence(adaptMetricPoint(p, m))}
+                    />
                   </>
                 ) : (
                   '—'

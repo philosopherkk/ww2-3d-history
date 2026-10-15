@@ -137,4 +137,7 @@ export const zhHant = {
   statusPrelude: ' · 亞洲／歐洲前奏（1939 年 9 月之前）',
   statusScrubber: ' · 時間軸 {date}',
   statusUnsure: ' · unsure',
+  seriesLegend: '指標序列。實心點是錨點。較淡的虛線點是內插或沿用。',
+  seriesAnchor: '錨點（實心）',
+  seriesInterpolated: '內插或沿用（虛線、較淡）',
 } satisfies typeof en
