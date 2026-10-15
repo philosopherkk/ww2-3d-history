@@ -344,8 +344,8 @@ export function DetailPanel() {
                       const end = 1945 + 8 / 12
                       const y = inc.year + (inc.month - 1) / 12
                       setPlaying(false)
-                      setTime(Math.min(1, Math.max(0, (y - start) / (end - start))))
                       selectIncident(inc.id)
+                      setTime(Math.min(1, Math.max(0, (y - start) / (end - start))))
                     }}
                   >
                     {inc.date} — <Localized value={inc.title} />

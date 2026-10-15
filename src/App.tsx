@@ -5,11 +5,21 @@ import { Globe } from './components/Globe'
 import { PlayTicker } from './components/PlayTicker'
 import { SourcesModal } from './components/SourcesModal'
 import { Timeline } from './components/Timeline'
+import { useT } from './shared/i18n/translate'
 import { useAppStore } from './state/appStore'
 import './App.css'
 
+function ListStub() {
+  const t = useT()
+  return (
+    <div className="flat-map-wrap list-stub">
+      <p>{t('listStub')}</p>
+    </div>
+  )
+}
+
 export default function App() {
-  const mapMode = useAppStore((s) => s.mapMode)
+  const view = useAppStore((s) => s.view)
   const setShowSources = useAppStore((s) => s.setShowSources)
 
   return (
@@ -17,7 +27,7 @@ export default function App() {
       <PlayTicker />
       <Controls />
       <main className="stage">
-        {mapMode === 'flat' ? <FlatMap /> : <Globe />}
+        {view === 'globe' ? <Globe /> : view === 'list' ? <ListStub /> : <FlatMap />}
         <div className="side">
           <Timeline />
           <DetailPanel />

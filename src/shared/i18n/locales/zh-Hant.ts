@@ -140,4 +140,5 @@ export const zhHant = {
   seriesLegend: '指標序列。實心點是錨點。較淡的虛線點是內插或沿用。',
   seriesAnchor: '錨點（實心）',
   seriesInterpolated: '內插或沿用（虛線、較淡）',
+  listStub: '目前日期的國家與事件列表。',
 } satisfies typeof en

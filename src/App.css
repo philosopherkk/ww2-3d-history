@@ -699,6 +699,13 @@ select {
   opacity: 0.72;
 }
 
+.list-stub {
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  color: var(--ink-dim);
+}
+
 .metric-value {
   font-size: 1.05rem;
 }

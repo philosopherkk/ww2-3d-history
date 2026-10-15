@@ -5,7 +5,8 @@ import { formatNumber } from '../shared/i18n/format'
 import { useLocale } from '../shared/i18n/useLocale'
 import { useT } from '../shared/i18n/translate'
 import type { Locale } from '../shared/i18n/types'
-import { useAppStore, type MapMode } from '../state/appStore'
+import { copyCurrentLink } from '../shared/urlState'
+import { useAppStore, type AtlasView } from '../state/appStore'
 
 const METRICS: MetricKey[] = [
   'economicPower',
@@ -24,12 +25,12 @@ export function Controls() {
   const playing = useAppStore((s) => s.playing)
   const metric = useAppStore((s) => s.metric)
   const detail = useAppStore((s) => s.detail)
-  const mapMode = useAppStore((s) => s.mapMode)
+  const view = useAppStore((s) => s.view)
   const setTime = useAppStore((s) => s.setTime)
   const setPlaying = useAppStore((s) => s.setPlaying)
   const setMetric = useAppStore((s) => s.setMetric)
   const setDetail = useAppStore((s) => s.setDetail)
-  const setMapMode = useAppStore((s) => s.setMapMode)
+  const setView = useAppStore((s) => s.setView)
   const setShowSources = useAppStore((s) => s.setShowSources)
 
   return (
@@ -49,6 +50,15 @@ export function Controls() {
               繁中
             </LocaleButton>
           </div>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              void copyCurrentLink()
+            }}
+          >
+            Copy link / 複製連結
+          </button>
           <button type="button" className="ghost" onClick={() => setShowSources(true)}>
             {t('sources')}
           </button>
@@ -93,9 +103,10 @@ export function Controls() {
       <div className="filter-row">
         <label>
           {t('mapView')}
-          <select value={mapMode} onChange={(e) => setMapMode(e.target.value as MapMode)}>
-            <option value="flat">{t('viewMap')}</option>
+          <select value={view} onChange={(e) => setView(e.target.value as AtlasView)}>
+            <option value="map">{t('viewMap')}</option>
             <option value="globe">{t('viewGlobe')}</option>
+            <option value="list">{t('viewList')}</option>
           </select>
         </label>
         <label>

@@ -1,14 +1,14 @@
 import { create } from 'zustand'
 import type { DetailLevel, MetricKey } from '../data/types'
 
-export type MapMode = 'flat' | 'globe'
+export type AtlasView = 'map' | 'globe' | 'list'
 
 interface AppState {
   time: number
   playing: boolean
   metric: MetricKey
   detail: DetailLevel
-  mapMode: MapMode
+  view: AtlasView
   selectedCountryId: string | null
   selectedIncidentId: string | null
   selectedPersonId: string | null
@@ -19,7 +19,7 @@ interface AppState {
   setPlaying: (p: boolean) => void
   setMetric: (m: MetricKey) => void
   setDetail: (d: DetailLevel) => void
-  setMapMode: (m: MapMode) => void
+  setView: (view: AtlasView) => void
   selectCountry: (id: string | null) => void
   selectIncident: (id: string | null) => void
   selectPerson: (id: string | null) => void
@@ -33,7 +33,7 @@ export const useAppStore = create<AppState>((set) => ({
   playing: false,
   metric: 'economicPower',
   detail: 'standard',
-  mapMode: 'flat',
+  view: 'map',
   selectedCountryId: null,
   selectedIncidentId: null,
   selectedPersonId: null,
@@ -44,7 +44,7 @@ export const useAppStore = create<AppState>((set) => ({
   setPlaying: (playing) => set({ playing }),
   setMetric: (metric) => set({ metric }),
   setDetail: (detail) => set({ detail }),
-  setMapMode: (mapMode) => set({ mapMode }),
+  setView: (view) => set({ view }),
   selectCountry: (selectedCountryId) =>
     set({
       selectedCountryId,

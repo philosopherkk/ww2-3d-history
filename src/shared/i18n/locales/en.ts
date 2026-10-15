@@ -150,6 +150,7 @@ const enSource = {
   seriesLegend: 'Metric series. Solid dots are anchors. Dashed lighter dots are interpolated or held.',
   seriesAnchor: 'Anchor (solid)',
   seriesInterpolated: 'Interpolated or held (dashed, lighter)',
+  listStub: 'Country and incident list for the current date.',
 } as const
 
 export type MessageKey = keyof typeof enSource
