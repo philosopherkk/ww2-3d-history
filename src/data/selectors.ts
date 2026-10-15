@@ -220,12 +220,18 @@ export function countryBriefing(
 
   const statusLine = `${involvementLabel(country.involvement)} · ${sideLabel(country.side)} · ${dateLabel}`
 
+  const related = relatedIncidentsForCountry(country, year, detail, 5)
+  const relatedTitles =
+    related.length > 0
+      ? related.map((i) => `${i.date}: ${i.title}`).join('; ')
+      : null
+
   const overview = [
-    `${country.name} appears in this atlas as a wartime participant entity.`,
+    `${country.name} at ${dateLabel}: classified here as ${involvementLabel(country.involvement).toLowerCase()}, coloured on the map as ${sideLabel(country.side).toLowerCase()}.`,
     country.roleNote,
     point
-      ? `At ${dateLabel}, ${ww2Dataset.metricLabels[metric].label.toLowerCase()} is about ${point.value} ${point.unit} (${point.certainty}${point.provenance && point.provenance !== 'anchor' ? `, ${point.provenance}` : ''}).`
-      : `At ${dateLabel}, this entity has no datapoint for the selected metric (outside its active window or beyond the nearest-point gap).`,
+      ? `Selected metric (${ww2Dataset.metricLabels[metric].label}) ≈ ${point.value} ${point.unit} at stamp ${pointStamp(point)} — certainty ${point.certainty}${point.provenance && point.provenance !== 'anchor' ? ` (${point.provenance})` : ''}.`
+      : `No datapoint for the selected metric at this scrubber date (outside the active window or beyond the nearest-point gap).`,
   ]
 
   if (detail === 'overview') {
@@ -234,18 +240,31 @@ export function countryBriefing(
 
   const standard = [
     ...overview,
-    `Series cadence for this entity: ${country.cadence} densification from sparse anchors — interpolated points stay approximate/unsure and are never upgraded to “certain”.`,
-    point?.note ? `Metric note at nearest stamp: ${point.note}` : null,
+    relatedTitles
+      ? `Incidents already reached by the scrubber that are near this pin or name this entity include: ${relatedTitles}.`
+      : `No nearby/named incidents have been reached yet at ${dateLabel} for the current detail filter.`,
+    `Teaching series use ${country.cadence} densification from sparse anchors — interpolated or held points stay approximate/unsure and are never upgraded to “certain”.`,
+    point?.note ? `Metric note: ${point.note}` : null,
+    'People linked below are major figures associated with this entity in the atlas — open a name for background and encyclopedia links.',
   ].filter(Boolean) as string[]
 
   if (detail === 'standard') {
     return { markerExplainer, statusLine, paragraphs: standard }
   }
 
+  const allMetrics = (Object.keys(ww2Dataset.metricLabels) as MetricKey[])
+    .map((m) => {
+      const p = metricAtYear(country, m, year)
+      if (!p) return `${ww2Dataset.metricLabels[m].label}: —`
+      return `${ww2Dataset.metricLabels[m].label}: ${p.value} ${p.unit} (${p.certainty}${p.provenance === 'interpolated' ? ', interpolated' : ''})`
+    })
+    .join('; ')
+
   const deep = [
     ...standard,
-    'Deep view lists every metric layer at the scrubber date below, plus linked incidents that are geographically near this pin or that name this entity in their teaching summaries.',
-    'Treat occupied, puppet, and late-declarant figures cautiously — national accounts and force totals often double-count metropolitan powers or remain unsure.',
+    `Full metric snapshot @ ${dateLabel}: ${allMetrics}.`,
+    'Deep mode adds denser incident links and person dossiers. Occupied, puppet, and late-declarant figures often double-count metropolitan powers or remain unsure — do not treat them as independent industrial peers without reading the certainty flags.',
+    'Geography pins mark teaching locations, not precise front lines. Political borders on the basemap are modern Natural Earth outlines for recognition, not 1939 frontiers.',
   ]
 
   return { markerExplainer, statusLine, paragraphs: deep }
@@ -262,10 +281,18 @@ export function incidentBriefing(
   detail: DetailLevel,
   dateLabel: string,
 ): IncidentBriefing {
+  const base = incidentSummary(incident, detail)
+  const extra =
+    detail === 'overview'
+      ? ''
+      : detail === 'standard'
+        ? ` Compare the scrubber (${dateLabel}) with the incident date (${incident.date}) to see what students “already know” on the timeline. People listed below are directly tied to this event in the atlas roster.`
+        : ` Deep mode keeps the longest teaching summary and emphasizes sources, encyclopedia links, and associated people. Certainty for this incident record: ${incident.certainty}. Casualty figures mentioned in prose may still be approximate even when the event date is certain.`
+
   return {
     markerExplainer:
-      'This map marker is a critical-incident pin (diamond) on the Earth surface. It marks where a dated event is taught — distinct from country metric pins.',
+      'This map marker is a critical-incident pin (diamond) on the map surface at the teaching lat/lon — distinct from country metric pins.',
     statusLine: `${incident.date}${incident.year < 1939 ? ' · Asian/European prelude (pre-Sep 1939)' : ''} · scrubber ${dateLabel}${incident.certainty === 'unsure' ? ' · unsure' : ''}`,
-    body: incidentSummary(incident, detail),
+    body: base + extra,
   }
 }

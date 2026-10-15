@@ -1,7 +1,7 @@
 import { datasetStats, ww2Dataset } from '../data/ww2Dataset'
 import { dateLabelFromFraction } from '../data/selectors'
 import type { DetailLevel, MetricKey } from '../data/types'
-import { useAppStore } from '../state/appStore'
+import { useAppStore, type MapMode } from '../state/appStore'
 
 const METRICS = Object.keys(ww2Dataset.metricLabels) as MetricKey[]
 const DETAILS: DetailLevel[] = ['overview', 'standard', 'deep']
@@ -11,10 +11,12 @@ export function Controls() {
   const playing = useAppStore((s) => s.playing)
   const metric = useAppStore((s) => s.metric)
   const detail = useAppStore((s) => s.detail)
+  const mapMode = useAppStore((s) => s.mapMode)
   const setTime = useAppStore((s) => s.setTime)
   const setPlaying = useAppStore((s) => s.setPlaying)
   const setMetric = useAppStore((s) => s.setMetric)
   const setDetail = useAppStore((s) => s.setDetail)
+  const setMapMode = useAppStore((s) => s.setMapMode)
   const setShowSources = useAppStore((s) => s.setShowSources)
 
   return (
@@ -66,6 +68,13 @@ export function Controls() {
 
       <div className="filter-row">
         <label>
+          Map view
+          <select value={mapMode} onChange={(e) => setMapMode(e.target.value as MapMode)}>
+            <option value="flat">2D map (default)</option>
+            <option value="globe">3D globe</option>
+          </select>
+        </label>
+        <label>
           Metric layer
           <select value={metric} onChange={(e) => setMetric(e.target.value as MetricKey)}>
             {METRICS.map((m) => (
@@ -88,15 +97,14 @@ export function Controls() {
       </div>
       <p className="hint">{ww2Dataset.metricLabels[metric].description}</p>
       <p className="hint muted">
-        {datasetStats.countryCount} countries · {datasetStats.incidentCount} incidents · majors weekly
-        densified · {datasetStats.totalMetricPoints.toLocaleString()} metric points · pins on Earth
-        surface · click for learning panel · drag to orbit · scroll to zoom · amber = unsure
+        {datasetStats.countryCount} countries · {datasetStats.incidentCount} incidents ·{' '}
+        {datasetStats.totalMetricPoints.toLocaleString()} metric points · default 2D equirectangular
+        map · click pins for learning panel (people + Wikipedia / Grokipedia) · amber = unsure
       </p>
     </header>
   )
 }
 
 function yearIsPrelude(t: number) {
-  // before Sep 1939
   return t < 0.18
 }

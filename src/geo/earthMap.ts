@@ -203,8 +203,16 @@ function featureLabelPoint(feature: GeoFeature): [number, number] | null {
   return null
 }
 
-/** Build a canvas texture from NASA raster + Natural Earth outlines. */
-export async function buildEarthTexture(size = 2048): Promise<THREE.CanvasTexture> {
+/** Lon/lat → 0..1 UV on equirectangular map (for 2D pin placement). */
+export function lonLatToMapFraction(lon: number, lat: number): { x: number; y: number } {
+  return {
+    x: (lon + 180) / 360,
+    y: (90 - lat) / 180,
+  }
+}
+
+/** Build equirectangular canvas from NASA raster + Natural Earth outlines. */
+export async function buildEarthCanvas(size = 2048): Promise<HTMLCanvasElement> {
   const w = size
   const h = size / 2
   const canvas = document.createElement('canvas')
@@ -307,6 +315,12 @@ export async function buildEarthTexture(size = 2048): Promise<THREE.CanvasTextur
     ctx.fillText(lab.text, x, y)
   }
 
+  return canvas
+}
+
+/** Three.js texture wrapper around {@link buildEarthCanvas}. */
+export async function buildEarthTexture(size = 2048): Promise<THREE.CanvasTexture> {
+  const canvas = await buildEarthCanvas(size)
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = 8
@@ -314,7 +328,7 @@ export async function buildEarthTexture(size = 2048): Promise<THREE.CanvasTextur
   return texture
 }
 
-/** @deprecated sync stub — use buildEarthTexture */
+/** @deprecated sync stub — use buildEarthCanvas */
 export function paintEarthMap(size = 1024): HTMLCanvasElement {
   const w = size
   const h = size / 2

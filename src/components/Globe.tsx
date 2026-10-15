@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import {
@@ -283,24 +283,10 @@ function IncidentMarker({ incident }: { incident: Incident }) {
 function SceneContent() {
   const time = useAppStore((s) => s.time)
   const detail = useAppStore((s) => s.detail)
-  const playing = useAppStore((s) => s.playing)
-  const setTime = useAppStore((s) => s.setTime)
-  const setPlaying = useAppStore((s) => s.setPlaying)
   const year = yearFromFraction(time)
   const metric = useAppStore((s) => s.metric)
   const incidents = incidentsVisible(detail, year)
   const active = countriesActiveAt(year, metric)
-
-  useFrame((_, dt) => {
-    if (!playing) return
-    const next = time + dt * 0.02
-    if (next >= 1) {
-      setTime(1)
-      setPlaying(false)
-    } else {
-      setTime(next)
-    }
-  })
 
   return (
     <>
@@ -356,7 +342,7 @@ function SelectionHud() {
           <span className="leg">Amber = unsure metric</span>
         </div>
         <p className="globe-hint">
-          Pins sit on the Earth. Hover or click — learning panel opens for that date.
+          Optional 3D view — switch to 2D map for easier clicking. Hover or click pins.
         </p>
       </div>
     )
