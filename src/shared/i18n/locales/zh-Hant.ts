@@ -141,4 +141,11 @@ export const zhHant = {
   seriesAnchor: '錨點（實心）',
   seriesInterpolated: '內插或沿用（虛線、較淡）',
   listStub: '目前日期的國家與事件列表。',
+  tableCountries: '此日期的國家',
+  tableIncidents: '此日期的事件',
+  colName: '名稱',
+  colInvolvement: '參與',
+  colEvidence: '證據',
+  colDate: '日期',
+  colTitle: '標題',
 } satisfies typeof en

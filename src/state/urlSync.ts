@@ -9,6 +9,7 @@ import {
 } from '../shared/urlState'
 import { useLocale, type Locale } from '../shared/i18n'
 import { useAppStore, type AtlasView } from './appStore'
+import { hasWebGL, isLowEndDevice } from './capabilities'
 import type { DetailLevel, MetricKey } from '../data/types'
 
 const METRICS: MetricKey[] = [
@@ -110,11 +111,14 @@ function applySelection(sel: string | undefined) {
 export function applyUrlToStore() {
   applying = true
   const parsed = readSearch<AtlasQuery>(currentSearch(), fields)
+  let view = parsed.view ?? 'map'
+  if (view === 'globe' && !hasWebGL()) view = 'map'
+  if (parsed.view == null && isLowEndDevice()) view = 'map'
   useAppStore.setState({
     time: parsed.t ?? DEFAULT_T,
     metric: parsed.layers ?? 'economicPower',
     detail: parsed.level ?? 'overview',
-    view: parsed.view ?? 'map',
+    view,
   })
   applySelection(parsed.sel)
   if (parsed.lang) useLocale.getState().setLocale(parsed.lang)

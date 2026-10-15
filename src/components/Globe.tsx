@@ -291,6 +291,8 @@ function IncidentMarker({ incident }: { incident: Incident }) {
 }
 
 function SceneContent() {
+  const reduceMotion =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const time = useAppStore((s) => s.time)
   const detail = useAppStore((s) => s.detail)
   const year = yearFromFraction(time)
@@ -303,7 +305,7 @@ function SceneContent() {
       <ambientLight intensity={0.55} />
       <directionalLight position={[5, 3, 2]} intensity={1.15} />
       <directionalLight position={[-3, -1, -2]} intensity={0.3} />
-      <Stars radius={80} depth={40} count={2200} factor={3} saturation={0} fade speed={0.4} />
+      <Stars radius={80} depth={40} count={reduceMotion ? 400 : 2200} factor={3} saturation={0} fade speed={reduceMotion ? 0 : 0.4} />
       <Earth />
       <Atmosphere />
       {active.map((c) => (
@@ -315,9 +317,11 @@ function SceneContent() {
       <OrbitControls
         enablePan
         enableZoom
+        autoRotate={false}
+        enableDamping={!reduceMotion}
         minDistance={3.2}
         maxDistance={10}
-        rotateSpeed={0.55}
+        rotateSpeed={reduceMotion ? 0.35 : 0.55}
         zoomSpeed={0.7}
         makeDefault
       />
@@ -385,7 +389,7 @@ function SelectionHud() {
 export function Globe() {
   return (
     <div className="globe-wrap">
-      <Canvas camera={{ position: [0, 1.2, 5.2], fov: 42 }} dpr={[1, 2]}>
+      <Canvas camera={{ position: [0, 1.2, 5.2], fov: 42 }} dpr={[1, 1.5]}>
         <color attach="background" args={['#0b1220']} />
         <SceneContent />
       </Canvas>

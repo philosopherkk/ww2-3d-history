@@ -151,6 +151,13 @@ const enSource = {
   seriesAnchor: 'Anchor (solid)',
   seriesInterpolated: 'Interpolated or held (dashed, lighter)',
   listStub: 'Country and incident list for the current date.',
+  tableCountries: 'Countries at this date',
+  tableIncidents: 'Incidents at this date',
+  colName: 'Name',
+  colInvolvement: 'Involvement',
+  colEvidence: 'Evidence',
+  colDate: 'Date',
+  colTitle: 'Title',
 } as const
 
 export type MessageKey = keyof typeof enSource

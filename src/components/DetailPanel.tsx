@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { incidentIsGraphic } from '../data/graphicContent'
 import { adaptIncident, adaptMetricPoint, adaptPerson, metricStoredUnsure } from '../data/evidenceAdapt'
 import { ww2Dataset } from '../data/ww2Dataset'
@@ -134,6 +134,22 @@ export function DetailPanel() {
   const [panel, setPanel] = useState<{ key: string; measured: Measured | null }>({ key: '', measured: null })
   const evidence = panel.key === selectionKey ? panel.measured : null
   const setEvidence = (measured: Measured | null) => setPanel({ key: selectionKey, measured })
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (evidence) {
+        setEvidence(null)
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      } else if (graphicOpen) {
+        setGraphicOpen(null)
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [evidence, graphicOpen, selectionKey])
 
   const fracYear = yearFromFraction(time)
   const dateLabel = dateLabelFromFraction(time)
