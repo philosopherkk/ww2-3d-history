@@ -89,8 +89,8 @@ export function Controls() {
       <p className="hint">{ww2Dataset.metricLabels[metric].description}</p>
       <p className="hint muted">
         {datasetStats.countryCount} countries · {datasetStats.incidentCount} incidents · majors weekly
-        densified · {datasetStats.totalMetricPoints.toLocaleString()} metric points · click pins for
-        learning panel · drag to orbit · scroll to zoom · amber bar = unsure
+        densified · {datasetStats.totalMetricPoints.toLocaleString()} metric points · pins on Earth
+        surface · click for learning panel · drag to orbit · scroll to zoom · amber = unsure
       </p>
     </header>
   )

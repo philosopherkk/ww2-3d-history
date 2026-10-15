@@ -1,136 +1,237 @@
 /**
- * Procedural equirectangular teaching map — continents + coasts + labeled anchors.
- * Approximate outlines for geographic grounding, not political borders.
+ * Real equirectangular Earth basemap:
+ * NASA raster + Natural Earth 110m country/coast outlines (public domain).
  */
 
-type Blob = { cx: number; cy: number; rx: number; ry: number; rot?: number }
+import * as THREE from 'three'
 
-/** Rough landmass ellipses in 1024×512 equirectangular space (lon −180..180, lat 90..−90). */
-const LAND: Blob[] = [
-  // North America
-  { cx: 220, cy: 160, rx: 95, ry: 70, rot: -0.2 },
-  { cx: 180, cy: 220, rx: 55, ry: 45, rot: 0.3 },
-  { cx: 250, cy: 250, rx: 40, ry: 55, rot: -0.4 },
-  // Greenland
-  { cx: 310, cy: 70, rx: 35, ry: 45 },
-  // South America
-  { cx: 300, cy: 340, rx: 45, ry: 95, rot: 0.15 },
-  { cx: 290, cy: 420, rx: 35, ry: 40 },
-  // Europe
-  { cx: 530, cy: 145, rx: 55, ry: 40, rot: 0.1 },
-  { cx: 555, cy: 175, rx: 40, ry: 30 },
-  // Africa
-  { cx: 545, cy: 300, rx: 70, ry: 110 },
-  { cx: 575, cy: 380, rx: 45, ry: 50 },
-  // Asia / Middle East
-  { cx: 650, cy: 180, rx: 80, ry: 50 },
-  { cx: 720, cy: 160, rx: 100, ry: 55, rot: -0.15 },
-  { cx: 800, cy: 200, rx: 90, ry: 70 },
-  { cx: 860, cy: 250, rx: 70, ry: 55 },
-  // India / SE Asia
-  { cx: 730, cy: 260, rx: 45, ry: 55 },
-  { cx: 800, cy: 300, rx: 55, ry: 40 },
-  // East Asia / Japan-ish islands
-  { cx: 880, cy: 200, rx: 25, ry: 35, rot: 0.5 },
-  // Australia
-  { cx: 870, cy: 380, rx: 70, ry: 45 },
-  // Antarctica fringe
-  { cx: 512, cy: 490, rx: 280, ry: 28 },
+type Position = [number, number] | [number, number, number]
+type LinearRing = Position[]
+type PolygonCoords = LinearRing[]
+type MultiPolygonCoords = PolygonCoords[]
+
+interface GeoFeature {
+  type: string
+  properties?: Record<string, unknown>
+  geometry?: {
+    type: 'Polygon' | 'MultiPolygon' | 'LineString' | 'MultiLineString'
+    coordinates: unknown
+  }
+}
+
+interface GeoJSON {
+  type: string
+  features: GeoFeature[]
+}
+
+const REGION_LABELS: { text: string; lon: number; lat: number; size: number; color: string }[] = [
+  { text: 'NORTH AMERICA', lon: -100, lat: 45, size: 15, color: 'rgba(235,225,200,0.7)' },
+  { text: 'SOUTH AMERICA', lon: -58, lat: -15, size: 13, color: 'rgba(235,225,200,0.65)' },
+  { text: 'EUROPE', lon: 15, lat: 50, size: 14, color: 'rgba(235,225,200,0.75)' },
+  { text: 'AFRICA', lon: 20, lat: 5, size: 15, color: 'rgba(235,225,200,0.65)' },
+  { text: 'ASIA', lon: 90, lat: 45, size: 16, color: 'rgba(235,225,200,0.7)' },
+  { text: 'AUSTRALIA', lon: 134, lat: -25, size: 12, color: 'rgba(235,225,200,0.65)' },
+  { text: 'ANTARCTICA', lon: 0, lat: -80, size: 11, color: 'rgba(220,230,240,0.45)' },
+  { text: 'ATLANTIC OCEAN', lon: -30, lat: 20, size: 12, color: 'rgba(160,200,230,0.5)' },
+  { text: 'PACIFIC OCEAN', lon: -150, lat: 5, size: 14, color: 'rgba(160,200,230,0.45)' },
+  { text: 'INDIAN OCEAN', lon: 75, lat: -20, size: 12, color: 'rgba(160,200,230,0.45)' },
+  { text: 'ARCTIC OCEAN', lon: 0, lat: 78, size: 10, color: 'rgba(180,210,230,0.4)' },
 ]
 
-const LABELS: { text: string; x: number; y: number; size: number; color: string }[] = [
-  { text: 'NORTH AMERICA', x: 210, y: 175, size: 14, color: 'rgba(220,210,180,0.55)' },
-  { text: 'SOUTH AMERICA', x: 285, y: 360, size: 12, color: 'rgba(220,210,180,0.5)' },
-  { text: 'EUROPE', x: 535, y: 140, size: 13, color: 'rgba(220,210,180,0.65)' },
-  { text: 'AFRICA', x: 545, y: 310, size: 14, color: 'rgba(220,210,180,0.5)' },
-  { text: 'ASIA', x: 760, y: 180, size: 16, color: 'rgba(220,210,180,0.55)' },
-  { text: 'AUSTRALIA', x: 870, y: 385, size: 11, color: 'rgba(220,210,180,0.5)' },
-  { text: 'ATLANTIC', x: 400, y: 260, size: 12, color: 'rgba(140,180,210,0.45)' },
-  { text: 'PACIFIC', x: 100, y: 280, size: 14, color: 'rgba(140,180,210,0.4)' },
-  { text: 'PACIFIC', x: 960, y: 280, size: 12, color: 'rgba(140,180,210,0.35)' },
-  { text: 'INDIAN OCEAN', x: 700, y: 370, size: 11, color: 'rgba(140,180,210,0.4)' },
-  { text: 'ARCTIC', x: 512, y: 28, size: 10, color: 'rgba(180,200,220,0.35)' },
-]
+/** Countries large enough to label on a teaching globe (NAME from Natural Earth). */
+const COUNTRY_LABEL_ALLOW = new Set([
+  'United States of America',
+  'Canada',
+  'Brazil',
+  'Argentina',
+  'Mexico',
+  'Russia',
+  'China',
+  'India',
+  'Australia',
+  'Greenland',
+  'Kazakhstan',
+  'Algeria',
+  'Congo',
+  'South Africa',
+  'Egypt',
+  'Turkey',
+  'Iran',
+  'Saudi Arabia',
+  'Indonesia',
+  'Japan',
+  'Mongolia',
+  'France',
+  'Germany',
+  'United Kingdom',
+  'Spain',
+  'Italy',
+  'Poland',
+  'Ukraine',
+  'Sweden',
+  'Norway',
+  'Finland',
+  'Peru',
+  'Colombia',
+  'Chile',
+  'New Zealand',
+  'Thailand',
+  'Vietnam',
+  'Philippines',
+  'Myanmar',
+  'Pakistan',
+  'Afghanistan',
+  'Ethiopia',
+  'Nigeria',
+  'Sudan',
+  'Libya',
+  'Mali',
+  'Angola',
+  'Madagascar',
+])
 
-/** Lon/lat → canvas pixel (equirectangular 1024×512). */
-export function lonLatToCanvas(lon: number, lat: number, w = 1024, h = 512): [number, number] {
+function baseUrl(): string {
+  return import.meta.env.BASE_URL || '/'
+}
+
+export function lonLatToCanvas(lon: number, lat: number, w: number, h: number): [number, number] {
   const x = ((lon + 180) / 360) * w
   const y = ((90 - lat) / 180) * h
   return [x, y]
 }
 
-export function paintEarthMap(size = 1024): HTMLCanvasElement {
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error(`Failed to load image ${src}`))
+    img.src = src
+  })
+}
+
+async function loadGeoJSON(path: string): Promise<GeoJSON> {
+  const res = await fetch(`${baseUrl()}${path}`)
+  if (!res.ok) throw new Error(`Failed to load ${path}`)
+  return res.json() as Promise<GeoJSON>
+}
+
+function ringCentroid(ring: LinearRing): [number, number] | null {
+  if (!ring.length) return null
+  let sx = 0
+  let sy = 0
+  let n = 0
+  for (const p of ring) {
+    sx += p[0]
+    sy += p[1]
+    n++
+  }
+  return [sx / n, sy / n]
+}
+
+function pathRing(ctx: CanvasRenderingContext2D, ring: LinearRing, w: number, h: number) {
+  if (!ring.length) return
+  const [x0, y0] = lonLatToCanvas(ring[0][0], ring[0][1], w, h)
+  ctx.moveTo(x0, y0)
+  for (let i = 1; i < ring.length; i++) {
+    const [x, y] = lonLatToCanvas(ring[i][0], ring[i][1], w, h)
+    ctx.lineTo(x, y)
+  }
+}
+
+function drawPolygon(
+  ctx: CanvasRenderingContext2D,
+  coords: PolygonCoords,
+  w: number,
+  h: number,
+  mode: 'fill' | 'stroke',
+) {
+  ctx.beginPath()
+  for (const ring of coords) pathRing(ctx, ring, w, h)
+  ctx.closePath()
+  if (mode === 'fill') ctx.fill()
+  else ctx.stroke()
+}
+
+function drawFeatureGeometry(
+  ctx: CanvasRenderingContext2D,
+  feature: GeoFeature,
+  w: number,
+  h: number,
+  mode: 'fill' | 'stroke',
+) {
+  const g = feature.geometry
+  if (!g) return
+  if (g.type === 'Polygon') {
+    drawPolygon(ctx, g.coordinates as PolygonCoords, w, h, mode)
+  } else if (g.type === 'MultiPolygon') {
+    for (const poly of g.coordinates as MultiPolygonCoords) {
+      drawPolygon(ctx, poly, w, h, mode)
+    }
+  } else if (g.type === 'LineString') {
+    ctx.beginPath()
+    pathRing(ctx, g.coordinates as LinearRing, w, h)
+    if (mode === 'stroke') ctx.stroke()
+  } else if (g.type === 'MultiLineString') {
+    for (const line of g.coordinates as LinearRing[]) {
+      ctx.beginPath()
+      pathRing(ctx, line, w, h)
+      if (mode === 'stroke') ctx.stroke()
+    }
+  }
+}
+
+function featureLabelPoint(feature: GeoFeature): [number, number] | null {
+  const g = feature.geometry
+  if (!g) return null
+  if (g.type === 'Polygon') {
+    return ringCentroid((g.coordinates as PolygonCoords)[0])
+  }
+  if (g.type === 'MultiPolygon') {
+    const polys = g.coordinates as MultiPolygonCoords
+    let best: LinearRing | null = null
+    let bestLen = 0
+    for (const poly of polys) {
+      const ring = poly[0]
+      if (ring && ring.length > bestLen) {
+        best = ring
+        bestLen = ring.length
+      }
+    }
+    return best ? ringCentroid(best) : null
+  }
+  return null
+}
+
+/** Build a canvas texture from NASA raster + Natural Earth outlines. */
+export async function buildEarthTexture(size = 2048): Promise<THREE.CanvasTexture> {
   const w = size
   const h = size / 2
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
   const ctx = canvas.getContext('2d')!
-  const sx = w / 1024
-  const sy = h / 512
 
-  // Ocean
+  // Fallback ocean if raster fails
   const ocean = ctx.createLinearGradient(0, 0, 0, h)
-  ocean.addColorStop(0, '#0f2744')
-  ocean.addColorStop(0.35, '#153a58')
-  ocean.addColorStop(0.65, '#124536')
-  ocean.addColorStop(1, '#0e2438')
+  ocean.addColorStop(0, '#0c2744')
+  ocean.addColorStop(0.5, '#123a52')
+  ocean.addColorStop(1, '#0c2438')
   ctx.fillStyle = ocean
   ctx.fillRect(0, 0, w, h)
 
-  // Soft depth banding
-  for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = `rgba(20, 60, 80, ${0.04 + i * 0.01})`
-    ctx.beginPath()
-    ctx.ellipse(w * 0.35, h * 0.55, w * 0.2, h * 0.12, 0, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  // Land fills
-  ctx.fillStyle = '#3f5f3a'
-  for (const b of LAND) {
-    ctx.save()
-    ctx.translate(b.cx * sx, b.cy * sy)
-    ctx.rotate(b.rot ?? 0)
-    ctx.scale(sx, sy)
-    ctx.beginPath()
-    ctx.ellipse(0, 0, b.rx, b.ry, 0, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
-  }
-
-  // Inland tone variation
-  ctx.fillStyle = 'rgba(70, 95, 55, 0.35)'
-  for (const b of LAND.filter((_, i) => i % 2 === 0)) {
-    ctx.beginPath()
-    ctx.ellipse(b.cx * sx, b.cy * sy, b.rx * sx * 0.55, b.ry * sy * 0.55, b.rot ?? 0, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  // Coast strokes
-  ctx.strokeStyle = 'rgba(200, 220, 170, 0.35)'
-  ctx.lineWidth = Math.max(1, 1.4 * sx)
-  for (const b of LAND) {
-    ctx.beginPath()
-    ctx.ellipse(b.cx * sx, b.cy * sy, b.rx * sx, b.ry * sy, b.rot ?? 0, 0, Math.PI * 2)
-    ctx.stroke()
-  }
-
-  // Simple European / East Asian “border hint” arcs (teaching anchors, not accurate frontiers)
-  ctx.strokeStyle = 'rgba(180, 160, 100, 0.22)'
-  ctx.lineWidth = Math.max(1, 1.1 * sx)
-  const borderHints: [number, number, number, number][] = [
-    [500, 120, 580, 200], // W Europe box
-    [560, 130, 640, 210], // E Europe / USSR west
-    [820, 160, 920, 250], // E Asia
-    [250, 200, 320, 280], // N America east
-  ]
-  for (const [x1, y1, x2, y2] of borderHints) {
-    ctx.strokeRect(x1 * sx, y1 * sy, (x2 - x1) * sx, (y2 - y1) * sy)
+  try {
+    const img = await loadImage(`${baseUrl()}earth-raster.jpg`)
+    ctx.drawImage(img, 0, 0, w, h)
+    // Slight darken so pins/labels read clearly
+    ctx.fillStyle = 'rgba(8, 16, 32, 0.28)'
+    ctx.fillRect(0, 0, w, h)
+  } catch {
+    // keep gradient fallback
   }
 
   // Graticule
-  ctx.strokeStyle = 'rgba(255,255,255,0.07)'
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'
   ctx.lineWidth = 1
   for (let lat = -60; lat <= 60; lat += 30) {
     const y = ((90 - lat) / 180) * h
@@ -146,44 +247,82 @@ export function paintEarthMap(size = 1024): HTMLCanvasElement {
     ctx.lineTo(x, h)
     ctx.stroke()
   }
-  // Equator emphasis
-  ctx.strokeStyle = 'rgba(180, 200, 220, 0.2)'
+  ctx.strokeStyle = 'rgba(200,220,240,0.18)'
   ctx.beginPath()
   ctx.moveTo(0, h / 2)
   ctx.lineTo(w, h / 2)
   ctx.stroke()
 
-  // Region labels
+  try {
+    const [countries, coast] = await Promise.all([
+      loadGeoJSON('geo/ne_110m_admin_0_countries.geojson'),
+      loadGeoJSON('geo/ne_110m_coastline.geojson'),
+    ])
+
+    // Soft country fills for inland contrast (keeps raster visible)
+    ctx.fillStyle = 'rgba(55, 85, 50, 0.12)'
+    for (const f of countries.features) {
+      drawFeatureGeometry(ctx, f, w, h, 'fill')
+    }
+
+    // Country borders
+    ctx.strokeStyle = 'rgba(220, 200, 150, 0.4)'
+    ctx.lineWidth = Math.max(0.8, w / 1600)
+    ctx.lineJoin = 'round'
+    for (const f of countries.features) {
+      drawFeatureGeometry(ctx, f, w, h, 'stroke')
+    }
+
+    // Coast emphasis
+    ctx.strokeStyle = 'rgba(230, 235, 220, 0.55)'
+    ctx.lineWidth = Math.max(1, w / 1400)
+    for (const f of coast.features) {
+      drawFeatureGeometry(ctx, f, w, h, 'stroke')
+    }
+
+    // Country labels (Natural Earth NAME at polygon centroid)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    for (const f of countries.features) {
+      const name = String(f.properties?.NAME ?? f.properties?.ADMIN ?? '')
+      if (!COUNTRY_LABEL_ALLOW.has(name)) continue
+      const pt = featureLabelPoint(f)
+      if (!pt) continue
+      const [x, y] = lonLatToCanvas(pt[0], pt[1], w, h)
+      ctx.font = `600 ${Math.max(9, w / 220)}px "IBM Plex Sans", sans-serif`
+      ctx.fillStyle = 'rgba(245, 235, 210, 0.55)'
+      ctx.fillText(name, x, y)
+    }
+  } catch (err) {
+    console.warn('Natural Earth overlay failed', err)
+  }
+
+  // Region / ocean labels at real lon/lat
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  for (const lab of LABELS) {
-    ctx.font = `600 ${lab.size * sx}px "IBM Plex Sans", sans-serif`
+  for (const lab of REGION_LABELS) {
+    const [x, y] = lonLatToCanvas(lab.lon, lab.lat, w, h)
+    ctx.font = `600 ${lab.size * (w / 2048)}px "IBM Plex Sans", sans-serif`
     ctx.fillStyle = lab.color
-    ctx.fillText(lab.text, lab.x * sx, lab.y * sy)
+    ctx.fillText(lab.text, x, y)
   }
 
-  // Capitals / theatre anchors (small labeled ticks for orientation)
-  const anchors: { name: string; lon: number; lat: number }[] = [
-    { name: 'London', lon: -0.1, lat: 51.5 },
-    { name: 'Berlin', lon: 13.4, lat: 52.5 },
-    { name: 'Moscow', lon: 37.6, lat: 55.8 },
-    { name: 'Tokyo', lon: 139.7, lat: 35.7 },
-    { name: 'Washington', lon: -77.0, lat: 38.9 },
-    { name: 'Chongqing', lon: 106.5, lat: 29.5 },
-    { name: 'Cairo', lon: 31.2, lat: 30.0 },
-    { name: 'Sydney', lon: 151.2, lat: -33.9 },
-  ]
-  for (const a of anchors) {
-    const [x, y] = lonLatToCanvas(a.lon, a.lat, w, h)
-    ctx.fillStyle = 'rgba(230, 210, 150, 0.55)'
-    ctx.beginPath()
-    ctx.arc(x, y, 2.2 * sx, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.font = `500 ${9 * sx}px "IBM Plex Sans", sans-serif`
-    ctx.fillStyle = 'rgba(230, 210, 150, 0.45)'
-    ctx.textAlign = 'left'
-    ctx.fillText(a.name, x + 4 * sx, y - 2 * sy)
-  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 8
+  texture.needsUpdate = true
+  return texture
+}
 
+/** @deprecated sync stub — use buildEarthTexture */
+export function paintEarthMap(size = 1024): HTMLCanvasElement {
+  const w = size
+  const h = size / 2
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = '#123048'
+  ctx.fillRect(0, 0, w, h)
   return canvas
 }

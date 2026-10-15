@@ -32,10 +32,9 @@ export function DetailPanel() {
       <aside className="detail">
         <h2>Learning panel</h2>
         <p className="empty">
-          Click any <strong>country metric pin</strong> (sphere + radial bar) or{' '}
-          <strong>incident diamond</strong> on the globe — or pick an incident in the timeline.
-          The panel explains that place/entity at the scrubber date (
-          {dateLabel}).
+          Click any <strong>country pin</strong> or <strong>incident diamond</strong> on the globe
+          surface — or pick an incident in the timeline. The panel explains that place/entity at the
+          scrubber date ({dateLabel}).
         </p>
         <p className="hint muted">
           Metric layer: {ww2Dataset.metricLabels[metric].label} · detail: {detail} ·{' '}
@@ -43,14 +42,14 @@ export function DetailPanel() {
         </p>
         <ul className="legend-list">
           <li>
-            <span className="swatch country" /> Country / entity metric marker — alliance colour;
-            bar height = selected metric
+            <span className="swatch country" /> Country / entity pin on the Earth — alliance colour;
+            size = selected metric
           </li>
           <li>
-            <span className="swatch incident" /> Critical-incident marker — dated event location
+            <span className="swatch incident" /> Critical-incident pin on the Earth — dated event
           </li>
           <li>
-            <span className="swatch unsure" /> Amber metric bar — point labeled unsure
+            <span className="swatch unsure" /> Amber pin — metric point labeled unsure
           </li>
         </ul>
       </aside>

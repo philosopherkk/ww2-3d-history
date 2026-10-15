@@ -216,7 +216,7 @@ export function countryBriefing(
 ): CountryBriefing {
   const point = metricAtYear(country, metric, year)
   const markerExplainer =
-    'This map marker is a country / entity metric pin: the sphere marks the teaching location; the radial bar shows the selected metric at the scrubber date.'
+    'This map marker is a country / entity pin on the Earth surface at the teaching lat/lon. Pin size reflects the selected metric at the scrubber date (not a stick floating in space).'
 
   const statusLine = `${involvementLabel(country.involvement)} · ${sideLabel(country.side)} · ${dateLabel}`
 
@@ -264,7 +264,7 @@ export function incidentBriefing(
 ): IncidentBriefing {
   return {
     markerExplainer:
-      'This map marker is a critical-incident pin (diamond). It marks where a dated event is taught on the globe — not a country metric bar.',
+      'This map marker is a critical-incident pin (diamond) on the Earth surface. It marks where a dated event is taught — distinct from country metric pins.',
     statusLine: `${incident.date}${incident.year < 1939 ? ' · Asian/European prelude (pre-Sep 1939)' : ''} · scrubber ${dateLabel}${incident.certainty === 'unsure' ? ' · unsure' : ''}`,
     body: incidentSummary(incident, detail),
   }
