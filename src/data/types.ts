@@ -1,3 +1,5 @@
+import type { LocalizedText } from '../shared/i18n/types'
+
 export type DetailLevel = 'overview' | 'standard' | 'deep'
 
 export type MetricKey =
@@ -30,20 +32,20 @@ export interface MetricPoint {
   value: number
   unit: string
   certainty: Certainty
-  note?: string
+  note?: string | LocalizedText
   /** How this point was produced. */
   provenance?: 'anchor' | 'interpolated' | 'held' | 'gap'
 }
 
 export interface Country {
   id: string
-  name: string
+  name: LocalizedText
   lat: number
   lon: number
   side: Side
   involvement: Involvement
   /** Short factual note on wartime role. */
-  roleNote: string
+  roleNote: LocalizedText
   /** Preferred dense series cadence for this country. */
   cadence: SeriesCadence
   metrics: Record<MetricKey, MetricPoint[]>
@@ -54,13 +56,13 @@ export interface Incident {
   date: string
   year: number
   month: number
-  title: string
+  title: LocalizedText
   lat: number
   lon: number
   minDetail: DetailLevel
-  summaryOverview: string
-  summaryStandard: string
-  summaryDeep: string
+  summaryOverview: LocalizedText
+  summaryStandard: LocalizedText
+  summaryDeep: LocalizedText
   sources: string[]
   certainty: Certainty
 }
@@ -85,17 +87,17 @@ export interface MetricAnchor {
   date: string
   value: number
   certainty: Certainty
-  note?: string
+  note?: LocalizedText
 }
 
 export interface CountrySpec {
   id: string
-  name: string
+  name: LocalizedText
   lat: number
   lon: number
   side: Side
   involvement: Involvement
-  roleNote: string
+  roleNote: LocalizedText
   cadence: SeriesCadence
   /** Inclusive involvement window; outside → no points (gap). */
   activeFrom: string

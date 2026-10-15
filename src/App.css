@@ -8,8 +8,8 @@
   --allies: #3a7ec4;
   --axis: #c45c3a;
   --danger-soft: #c4a03a;
-  --font-display: 'Libre Baskerville', 'Palatino Linotype', Palatino, serif;
-  --font-ui: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-display: Palatino, 'Palatino Linotype', 'Songti TC', 'PMingLiU', serif;
+  --font-ui: system-ui, 'Segoe UI', 'PingFang TC', 'Hiragino Sans CNS', 'Microsoft JhengHei', sans-serif;
 }
 
 * {
@@ -382,6 +382,49 @@ select {
   min-height: 0;
 }
 
+.lessons {
+  padding: 0.7rem 1rem 0.2rem;
+  border-bottom: 1px solid var(--line);
+  max-height: 28vh;
+  overflow: auto;
+}
+
+.lessons h2 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.lessons ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lessons li {
+  margin-bottom: 0.45rem;
+}
+
+.lessons button {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
+.lessons button.selected {
+  text-decoration: underline;
+}
+
+.lessons p {
+  margin: 0.15rem 0 0;
+  color: var(--ink-dim);
+  font-size: 0.75rem;
+}
+
 .detail {
   flex: 1;
   min-height: 0;
@@ -613,6 +656,199 @@ select {
 .ghost:hover {
   color: var(--ink);
   border-color: var(--accent);
+}
+
+.locale-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: 0.45rem;
+}
+
+.locale-toggle button {
+  border: none;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.15rem 0.1rem;
+}
+
+.locale-toggle button[aria-pressed='true'] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.en-original {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-dim);
+  margin-left: 0.2rem;
+}
+
+.edu-footer {
+  padding: 0.4rem 1.1rem 0.55rem;
+  border-top: 1px solid var(--line);
+  background: rgba(10, 16, 28, 0.9);
+  font-size: 0.75rem;
+}
+
+.series-chart {
+  margin: 0.45rem 0 0.2rem;
+}
+
+.series-chart svg {
+  width: 100%;
+  height: 4.2rem;
+  background: rgba(8, 12, 20, 0.35);
+}
+
+.series-dashed {
+  fill: none;
+  stroke: rgba(232, 226, 212, 0.45);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+
+.series-anchor {
+  fill: #f0e6c8;
+  stroke: #c4a35a;
+  stroke-width: 0.6;
+}
+
+.series-interp {
+  fill: rgba(232, 226, 212, 0.25);
+  stroke: rgba(232, 226, 212, 0.45);
+  stroke-width: 0.6;
+}
+
+.series-legend {
+  display: flex;
+  gap: 0.8rem;
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+}
+
+.map-pin-estimated {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
+.list-stub,
+.boot {
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  color: var(--ink-dim);
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.6rem;
+  top: 0.4rem;
+  z-index: 30;
+  transform: translateY(-140%);
+  background: #121b2b;
+  color: var(--ink);
+  border: 1px solid var(--accent);
+  padding: 0.35rem 0.55rem;
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.list-view {
+  overflow: auto;
+  padding: 2.2rem 0.8rem 0.8rem;
+  min-height: 360px;
+}
+
+.list-view .border-notice {
+  position: static;
+  display: inline-block;
+  margin-bottom: 0.6rem;
+}
+
+.atlas-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+}
+
+.atlas-table caption {
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.atlas-table th,
+.atlas-table td {
+  border-bottom: 1px solid rgba(200, 180, 120, 0.16);
+  padding: 0.35rem 0.4rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.atlas-table tr:focus-visible,
+.atlas-table tr.selected {
+  background: rgba(196, 163, 90, 0.12);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.border-notice {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.7rem;
+  z-index: 3;
+  margin: 0;
+  padding: 0.25rem 0.45rem;
+  background: rgba(10, 16, 28, 0.78);
+  border: 1px solid var(--line);
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+  pointer-events: none;
+}
+
+.list-stub .border-notice {
+  position: static;
+}
+
+.content-note {
+  display: block;
+  margin: 0.4rem 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba(196, 160, 58, 0.7);
+  background: rgba(196, 160, 58, 0.08);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dest-type,
+.ai-note {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+
+.ai-note {
+  display: block;
+  margin-top: 0.15rem;
 }
 
 .metric-value {

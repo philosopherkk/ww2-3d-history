@@ -15,6 +15,9 @@ import {
 } from '../data/selectors'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { buildEarthTexture } from '../geo/earthMap'
+import { resolveLocalized } from '../data/localize'
+import { useLocale } from '../shared/i18n/useLocale'
+import { useT } from '../shared/i18n/translate'
 import { useAppStore } from '../state/appStore'
 import type { Country, Incident } from '../data/types'
 
@@ -82,10 +85,11 @@ function MarkerLabel({
   lines: string[]
   kind: 'country' | 'incident'
 }) {
+  const t = useT()
   return (
     <div className={`globe-label globe-label--${kind}`}>
       <div className="globe-label-kind">
-        {kind === 'country' ? 'Country / entity pin' : 'Critical incident'}
+        {kind === 'country' ? t('countryPinKind') : t('incidentPinKind')}
       </div>
       <strong>{title}</strong>
       {lines.map((l) => (
@@ -101,6 +105,7 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
   const hovered = useAppStore((s) => s.hoveredCountryId === country.id)
   const selectCountry = useAppStore((s) => s.selectCountry)
   const setHoveredCountry = useAppStore((s) => s.setHoveredCountry)
+  const locale = useLocale((s) => s.locale)
   const time = useAppStore((s) => s.time)
   const point = metricAtYear(country, metric, year)
   const max = maxMetricValue(metric, year)
@@ -117,6 +122,7 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
   const color =
     country.side === 'axis' ? '#c45c3a' : country.side === 'allies' ? '#3a7ec4' : '#8a8a6a'
   const unsure = point.certainty === 'unsure'
+  const estimatedPoint = point.provenance === 'interpolated' || point.provenance === 'held'
   const showLabel = selected || hovered
   const accent = unsure ? '#c4a03a' : color
 
@@ -151,6 +157,8 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
           emissiveIntensity={selected ? 0.4 : hovered ? 0.22 : 0.08}
           roughness={0.55}
           metalness={0.1}
+          transparent={estimatedPoint}
+          opacity={estimatedPoint ? 0.55 : 1}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -186,7 +194,7 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
         >
           <MarkerLabel
             kind="country"
-            title={country.name}
+            title={resolveLocalized(country.name, locale).text}
             lines={[
               dateLabelFromFraction(time),
               involvementLabel(country.involvement),
@@ -204,6 +212,8 @@ function IncidentMarker({ incident }: { incident: Incident }) {
   const hovered = useAppStore((s) => s.hoveredIncidentId === incident.id)
   const selectIncident = useAppStore((s) => s.selectIncident)
   const setHoveredIncident = useAppStore((s) => s.setHoveredIncident)
+  const t = useT()
+  const locale = useLocale((s) => s.locale)
   const time = useAppStore((s) => s.time)
   const pose = useMemo(
     () => surfacePose(incident.lat, incident.lon, R + INCIDENT_EPS),
@@ -267,11 +277,11 @@ function IncidentMarker({ incident }: { incident: Incident }) {
         >
           <MarkerLabel
             kind="incident"
-            title={incident.title}
+            title={resolveLocalized(incident.title, locale).text}
             lines={[
               incident.date,
-              `Scrubber · ${dateLabelFromFraction(time)}`,
-              'Incident pin on surface (not a metric stick)',
+              t('scrubberLine', { date: dateLabelFromFraction(time) }),
+              t('incidentSurfaceHint'),
             ]}
           />
         </Html>
@@ -281,6 +291,8 @@ function IncidentMarker({ incident }: { incident: Incident }) {
 }
 
 function SceneContent() {
+  const reduceMotion =
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const time = useAppStore((s) => s.time)
   const detail = useAppStore((s) => s.detail)
   const year = yearFromFraction(time)
@@ -293,7 +305,7 @@ function SceneContent() {
       <ambientLight intensity={0.55} />
       <directionalLight position={[5, 3, 2]} intensity={1.15} />
       <directionalLight position={[-3, -1, -2]} intensity={0.3} />
-      <Stars radius={80} depth={40} count={2200} factor={3} saturation={0} fade speed={0.4} />
+      <Stars radius={80} depth={40} count={reduceMotion ? 400 : 2200} factor={3} saturation={0} fade speed={reduceMotion ? 0 : 0.4} />
       <Earth />
       <Atmosphere />
       {active.map((c) => (
@@ -305,9 +317,11 @@ function SceneContent() {
       <OrbitControls
         enablePan
         enableZoom
+        autoRotate={false}
+        enableDamping={!reduceMotion}
         minDistance={3.2}
         maxDistance={10}
-        rotateSpeed={0.55}
+        rotateSpeed={reduceMotion ? 0.35 : 0.55}
         zoomSpeed={0.7}
         makeDefault
       />
@@ -316,6 +330,8 @@ function SceneContent() {
 }
 
 function SelectionHud() {
+  const t = useT()
+  const locale = useLocale((s) => s.locale)
   const time = useAppStore((s) => s.time)
   const countryId = useAppStore((s) => s.selectedCountryId)
   const incidentId = useAppStore((s) => s.selectedIncidentId)
@@ -337,13 +353,13 @@ function SelectionHud() {
       <div className="globe-hud-stack">
         <div className="globe-hud">{dateLabelFromFraction(time)}</div>
         <div className="globe-legend">
-          <span className="leg leg-country">● Country pin (on surface)</span>
-          <span className="leg leg-incident">◆ Incident pin (on surface)</span>
-          <span className="leg">Amber = unsure metric</span>
+          <span className="leg leg-country">{t('legCountrySurface')}</span>
+          <span className="leg leg-incident">{t('legIncidentSurface')}</span>
+          <span className="leg">{t('amberUnsure')}</span>
+          <span className="leg">● {t('seriesAnchor')}</span>
+          <span className="leg">◐ {t('seriesInterpolated')}</span>
         </div>
-        <p className="globe-hint">
-          Optional 3D view — switch to 2D map for easier clicking. Hover or click pins.
-        </p>
+        <p className="globe-hint">{t('globeHint')}</p>
       </div>
     )
   }
@@ -351,18 +367,20 @@ function SelectionHud() {
   return (
     <div className="globe-hud-stack">
       <div className="globe-hud globe-hud--focus">
-        <span className="globe-hud-kind">{c ? 'Country / entity' : 'Incident'}</span>
-        <strong>{c?.name ?? inc?.title}</strong>
+        <span className="globe-hud-kind">{c ? t('countryEntity') : t('incidentKind')}</span>
+        <strong>
+          {c ? resolveLocalized(c.name, locale).text : inc ? resolveLocalized(inc.title, locale).text : ''}
+        </strong>
         <span>
           {dateLabelFromFraction(time)}
           {c ? ` · ${involvementLabel(c.involvement)}` : ''}
           {inc && !c ? ` · ${inc.date}` : ''}
-          {sticky ? ' · selected' : ' · hover'}
+          {sticky ? ` · ${t('selected')}` : ` · ${t('hover')}`}
         </span>
       </div>
       <div className="globe-legend">
-        <span className="leg leg-country">● Country pin</span>
-        <span className="leg leg-incident">◆ Incident pin</span>
+        <span className="leg leg-country">{t('legCountry')}</span>
+        <span className="leg leg-incident">{t('legIncident')}</span>
       </div>
     </div>
   )
@@ -371,10 +389,11 @@ function SelectionHud() {
 export function Globe() {
   return (
     <div className="globe-wrap">
-      <Canvas camera={{ position: [0, 1.2, 5.2], fov: 42 }} dpr={[1, 2]}>
+      <Canvas camera={{ position: [0, 1.2, 5.2], fov: 42 }} dpr={[1, 1.5]}>
         <color attach="background" args={['#0b1220']} />
         <SceneContent />
       </Canvas>
+      <p className="border-notice">Modern borders shown / 顯示為現代國界</p>
       <SelectionHud />
     </div>
   )

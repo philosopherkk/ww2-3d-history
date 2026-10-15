@@ -1,0 +1,81 @@
+.evidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  border: 1px solid rgba(200, 180, 120, 0.45);
+  background: rgba(10, 16, 28, 0.55);
+  color: inherit;
+  font: inherit;
+  font-size: 0.68rem;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  padding: 0.12rem 0.38rem;
+  cursor: pointer;
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.evidence-badge[disabled],
+span.evidence-badge {
+  cursor: default;
+}
+
+.evidence-badge-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.evidence-sourced {
+  border-color: rgba(120, 170, 130, 0.7);
+}
+
+.evidence-estimated {
+  border-style: dashed;
+  opacity: 0.92;
+}
+
+.evidence-disputed {
+  border-style: dotted;
+}
+
+.evidence-order_of_magnitude {
+  font-variant-numeric: tabular-nums;
+}
+
+.evidence-unverified {
+  border-style: dashed;
+  opacity: 0.8;
+}
+
+.evidence-unsure {
+  border-color: rgba(196, 160, 58, 0.7);
+}
+
+.evidence-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.source-panel {
+  margin-top: 0.45rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(200, 180, 120, 0.28);
+  background: rgba(8, 12, 20, 0.55);
+  font-size: 0.78rem;
+}
+
+.source-panel h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+}
+
+.source-panel ul {
+  margin: 0.2rem 0 0.45rem;
+  padding-left: 1.1rem;
+}
+
+.source-panel p {
+  margin: 0.25rem 0;
+}

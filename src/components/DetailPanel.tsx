@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import { incidentIsGraphic } from '../data/graphicContent'
+import { adaptIncident, adaptMetricPoint, adaptPerson, metricStoredUnsure } from '../data/evidenceAdapt'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { incidentExternalLinks } from '../data/incidentLinks'
 import {
@@ -13,21 +16,45 @@ import {
   dateLabelFromFraction,
   incidentBriefing,
   metricAtYear,
+  metricLabel,
   pointStamp,
   relatedCountriesForIncident,
   relatedIncidentsForCountry,
   yearFromFraction,
 } from '../data/selectors'
+import type { DetailLevel, MetricKey } from '../data/types'
+import { formatNumber } from '../shared/i18n/format'
+import type { LocalizedText } from '../shared/i18n/types'
+import { useT } from '../shared/i18n/translate'
+import type { Measured } from '../shared/evidence/types'
+import { EvidenceBadge, SourcePanel } from '../shared/evidence'
 import { useAppStore } from '../state/appStore'
+import { Localized } from './Localized'
+import { SeriesChart } from './SeriesChart'
+
+function destinationType(link: ExternalLink): string {
+  if (link.url.includes('wikipedia.org')) return 'Wikipedia'
+  if (link.url.includes('/search')) return 'Search / 搜尋'
+  if (link.url.includes('grokipedia.com')) return 'Grokipedia'
+  return 'External / 外部網站'
+}
 
 function ExtLinks({ links }: { links: ExternalLink[] }) {
+  const ordered = [...links].sort((a, b) => {
+    const rank = (url: string) => (url.includes('wikipedia.org') ? 0 : 1)
+    return rank(a.url) - rank(b.url)
+  })
   return (
     <ul className="ext-links">
-      {links.map((l) => (
+      {ordered.map((l) => (
         <li key={l.url}>
-          <a href={l.url} target="_blank" rel="noreferrer">
+          <a href={l.url} target="_blank" rel="noopener noreferrer">
             {l.label}
           </a>
+          <span className="dest-type">{destinationType(l)}</span>
+          {l.url.includes('grokipedia.com') && (
+            <span className="ai-note">AI 生成內容，請比對 / AI-generated — compare with other sources</span>
+          )}
           {l.certainty === 'unsure' && <span className="badge">unsure</span>}
         </li>
       ))}
@@ -35,7 +62,62 @@ function ExtLinks({ links }: { links: ExternalLink[] }) {
   )
 }
 
+function IncidentBody({
+  incidentId,
+  detail,
+  summary,
+  overview,
+  extra,
+  opened,
+  onOpen,
+}: {
+  incidentId: string
+  detail: DetailLevel
+  summary: LocalizedText
+  overview: LocalizedText
+  extra: string
+  opened: boolean
+  onOpen: () => void
+}) {
+  const graphic = incidentIsGraphic(incidentId)
+  if (!graphic) {
+    return (
+      <p>
+        <Localized value={summary} />
+        {extra}
+      </p>
+    )
+  }
+  if (detail !== 'deep' || !opened) {
+    return (
+      <>
+        <p>
+          <Localized value={overview} />
+        </p>
+        {detail === 'deep' ? (
+          <button type="button" className="content-note" onClick={onOpen}>
+            內容提示：涉及戰爭暴行 / Content note: wartime atrocities
+          </button>
+        ) : null}
+      </>
+    )
+  }
+  return (
+    <p>
+      <Localized value={summary} />
+      {extra}
+    </p>
+  )
+}
+
+function detailName(detail: DetailLevel, tr: ReturnType<typeof useT>) {
+  if (detail === 'overview') return tr('detailOverview')
+  if (detail === 'standard') return tr('detailStandard')
+  return tr('detailDeep')
+}
+
 export function DetailPanel() {
+  const t = useT()
   const time = useAppStore((s) => s.time)
   const metric = useAppStore((s) => s.metric)
   const detail = useAppStore((s) => s.detail)
@@ -47,12 +129,34 @@ export function DetailPanel() {
   const selectPerson = useAppStore((s) => s.selectPerson)
   const setTime = useAppStore((s) => s.setTime)
   const setPlaying = useAppStore((s) => s.setPlaying)
+  const selectionKey = `${countryId ?? ''}|${incidentId ?? ''}|${personId ?? ''}`
+  const [graphicOpen, setGraphicOpen] = useState<string | null>(null)
+  const [panel, setPanel] = useState<{ key: string; measured: Measured | null }>({ key: '', measured: null })
+  const evidence = panel.key === selectionKey ? panel.measured : null
+  const setEvidence = (measured: Measured | null) => setPanel({ key: selectionKey, measured })
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (evidence) {
+        setEvidence(null)
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      } else if (graphicOpen) {
+        setGraphicOpen(null)
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [evidence, graphicOpen, selectionKey])
 
   const fracYear = yearFromFraction(time)
   const dateLabel = dateLabelFromFraction(time)
   const country = ww2Dataset.countries.find((c) => c.id === countryId)
   const incident = ww2Dataset.incidents.find((i) => i.id === incidentId)
   const person = getPerson(personId)
+  const detailText = detailName(detail, t)
 
   if (person) {
     const links = personExternalLinks(person)
@@ -60,24 +164,28 @@ export function DetailPanel() {
       <aside className="detail">
         <div className="detail-head">
           <div>
-            <p className="kind-chip kind-person">Person</p>
-            <h2>{person.name}</h2>
+            <p className="kind-chip kind-person">{t('person')}</p>
+            <h2>
+              <Localized value={person.name} />
+            </h2>
           </div>
           <button type="button" className="ghost" onClick={() => selectPerson(null)}>
-            Back
+            {t('back')}
           </button>
         </div>
         <p className="meta">
-          {person.role}
-          {person.certainty === 'unsure' ? ' · unsure' : ''} · context @ {dateLabel}
+          <Localized value={person.role} /> · {t('contextAt', { date: dateLabel })}
         </p>
-        <h3>Background</h3>
-        <p>{personBackground(person, detail)}</p>
-        <p className="hint muted">
-          Detail “{detail}” deepens this dossier. Encyclopedia links use verified URL patterns —
-          Grokipedia search is labeled unsure when the exact article slug was not verified.
+        <p>
+          <EvidenceBadge level={adaptPerson(person).level} onClick={() => setEvidence(adaptPerson(person))} />
         </p>
-        <h3>Encyclopedia</h3>
+        {evidence ? <SourcePanel measured={evidence} onClose={() => setEvidence(null)} /> : null}
+        <h3>{t('background')}</h3>
+        <p>
+          <Localized value={personBackground(person, detail)} />
+        </p>
+        <p className="hint muted">{t('dossierHint', { detail: detailText })}</p>
+        <h3>{t('encyclopedia')}</h3>
         <ExtLinks links={links} />
       </aside>
     )
@@ -86,25 +194,25 @@ export function DetailPanel() {
   if (!country && !incident) {
     return (
       <aside className="detail">
-        <h2>Learning panel</h2>
-        <p className="empty">
-          Click any <strong>country pin</strong> or <strong>incident diamond</strong> on the map —
-          or pick an incident in the timeline. The panel explains that place/entity at the scrubber
-          date ({dateLabel}), with people and encyclopedia links.
-        </p>
+        <h2>{t('learningPanel')}</h2>
+        <p className="empty">{t('emptyPanel', { date: dateLabel })}</p>
         <p className="hint muted">
-          Metric layer: {ww2Dataset.metricLabels[metric].label} · detail: {detail} ·{' '}
-          {ww2Dataset.countries.length} entities · {ww2Dataset.incidents.length} incidents.
+          {t('metricDetailHint', {
+            metric: metricLabel(metric),
+            detail: detailText,
+            countries: ww2Dataset.countries.length,
+            incidents: ww2Dataset.incidents.length,
+          })}
         </p>
         <ul className="legend-list">
           <li>
-            <span className="swatch country" /> Country pin — alliance colour; size = selected metric
+            <span className="swatch country" /> {t('legendCountry')}
           </li>
           <li>
-            <span className="swatch incident" /> Incident pin — dated event on the map
+            <span className="swatch incident" /> {t('legendIncident')}
           </li>
           <li>
-            <span className="swatch unsure" /> Amber — metric/link labeled unsure
+            <span className="swatch unsure" /> {t('legendUnsure')}
           </li>
         </ul>
       </aside>
@@ -124,48 +232,67 @@ export function DetailPanel() {
       <aside className="detail">
         <div className="detail-head">
           <div>
-            <p className="kind-chip kind-incident">Critical incident</p>
-            <h2>{incident.title}</h2>
+            <p className="kind-chip kind-incident">{t('criticalIncident')}</p>
+            <h2>
+              <Localized value={incident.title} />
+            </h2>
           </div>
           <button type="button" className="ghost" onClick={() => selectIncident(null)}>
-            Close
+            {t('close')}
           </button>
         </div>
         <p className="meta">{brief.statusLine}</p>
-        <p className="marker-explainer">{brief.markerExplainer}</p>
-        <h3>Background @ {dateLabel}</h3>
-        <p>{brief.body}</p>
-        <p className="hint muted">
-          Student detail “{detail}” deepens this text (overview → standard → deep).
+        <p>
+          <EvidenceBadge
+            level={adaptIncident(incident).level}
+            storedUnsure={incident.certainty === 'unsure'}
+            onClick={() => setEvidence(adaptIncident(incident))}
+          />
         </p>
+        {evidence ? <SourcePanel measured={evidence} onClose={() => setEvidence(null)} /> : null}
+        <p className="marker-explainer">{brief.markerExplainer}</p>
+        <h3>{t('backgroundAt', { date: dateLabel })}</h3>
+        <IncidentBody
+          incidentId={incident.id}
+          detail={detail}
+          summary={brief.summary}
+          overview={incident.summaryOverview}
+          extra={brief.extra}
+          opened={graphicOpen === incident.id}
+          onOpen={() => setGraphicOpen(incident.id)}
+        />
+        <p className="hint muted">{t('detailDeepens', { detail: detailText })}</p>
 
-        <h3>People involved</h3>
+        <h3>{t('peopleInvolved')}</h3>
         {folks.length === 0 ? (
-          <p className="hint muted">No rostered people linked to this incident pin yet.</p>
+          <p className="hint muted">{t('noPeopleIncident')}</p>
         ) : (
           <ul className="people-list">
             {folks.map((p) => (
               <li key={p.id}>
                 <button type="button" className="linkish" onClick={() => selectPerson(p.id)}>
-                  {p.name}
+                  <Localized value={p.name} />
                 </button>
-                <span className="meta"> — {p.role}</span>
+                <span className="meta">
+                  {' '}
+                  — <Localized value={p.role} />
+                </span>
               </li>
             ))}
           </ul>
         )}
 
-        <h3>Encyclopedia</h3>
+        <h3>{t('encyclopedia')}</h3>
         <ExtLinks links={ext} />
 
         {nearby.length > 0 && (
           <>
-            <h3>Nearby entities on the map</h3>
+            <h3>{t('nearbyEntities')}</h3>
             <ul className="related-list">
               {nearby.map((c) => (
                 <li key={c.id}>
                   <button type="button" className="linkish" onClick={() => selectCountry(c.id)}>
-                    {c.name}
+                    <Localized value={c.name} />
                   </button>
                   <span className="meta"> · {c.involvement}</span>
                 </li>
@@ -174,7 +301,7 @@ export function DetailPanel() {
           </>
         )}
 
-        <h3>Sources</h3>
+        <h3>{t('sourcesHeading')}</h3>
         <ul className="sources-mini">
           {sources.map((s) => (
             <li key={s!.id}>{s!.citation}</li>
@@ -193,37 +320,41 @@ export function DetailPanel() {
     <aside className="detail">
       <div className="detail-head">
         <div>
-          <p className="kind-chip kind-country">Country / entity</p>
-          <h2>{country!.name}</h2>
+          <p className="kind-chip kind-country">{t('countryEntity')}</p>
+          <h2>
+            <Localized value={country!.name} />
+          </h2>
         </div>
         <button type="button" className="ghost" onClick={() => selectCountry(null)}>
-          Close
+          {t('close')}
         </button>
       </div>
       <p className="meta">{brief.statusLine}</p>
       <p className="marker-explainer">{brief.markerExplainer}</p>
 
-      <h3>Background @ {dateLabel}</h3>
-      {brief.paragraphs.map((p) => (
-        <p key={p.slice(0, 64)}>{p}</p>
-      ))}
-      <p className="hint muted">
-        Detail level “{detail}” adds series, incident, and people context — it does not invent events.
+      <h3>{t('backgroundAt', { date: dateLabel })}</h3>
+      <p>
+        <Localized value={brief.roleNote} />
       </p>
+      {brief.paragraphs.map((p) => (
+        <p key={p.slice(0, 80)}>{p}</p>
+      ))}
+      <p className="hint muted">{t('detailAdds', { detail: detailText })}</p>
 
-      <h3>People involved</h3>
+      <h3>{t('peopleInvolved')}</h3>
       {folks.length === 0 ? (
-        <p className="hint muted">
-          No major rostered leaders for this entity — try a major combatant or related incident.
-        </p>
+        <p className="hint muted">{t('noPeopleCountry')}</p>
       ) : (
         <ul className="people-list">
           {folks.map((p) => (
             <li key={p.id}>
               <button type="button" className="linkish" onClick={() => selectPerson(p.id)}>
-                {p.name}
+                <Localized value={p.name} />
               </button>
-              <span className="meta"> — {p.role}</span>
+              <span className="meta">
+                {' '}
+                — <Localized value={p.role} />
+              </span>
             </li>
           ))}
         </ul>
@@ -232,56 +363,61 @@ export function DetailPanel() {
       {point ? (
         <>
           <p className="metric-value">
-            {ww2Dataset.metricLabels[metric].label}:{' '}
+            {metricLabel(metric)}:{' '}
             <strong>
-              {point.value} {point.unit}
+              {formatNumber(point.value)} {point.unit}
             </strong>
           </p>
           <p className="meta">
-            Point: {pointStamp(point)} · certainty:{' '}
-            <span className={point.certainty === 'unsure' ? 'unsure' : ''}>{point.certainty}</span>
-            {point.provenance ? ` · ${point.provenance}` : ''}
+            {t('pointLabel')}: {pointStamp(point)}{' '}
+            <EvidenceBadge
+              level={adaptMetricPoint(point, metric).level}
+              storedUnsure={metricStoredUnsure(point)}
+              onClick={() => setEvidence(adaptMetricPoint(point, metric))}
+            />
           </p>
-          {point.note && <p className="note">{point.note}</p>}
+          <SeriesChart points={country!.metrics[metric]} />
+          {evidence ? <SourcePanel measured={evidence} onClose={() => setEvidence(null)} /> : null}
+          {point.note && (
+            <p className="note">
+              <Localized value={point.note} />
+            </p>
+          )}
         </>
       ) : (
-        <p className="empty">
-          No nearby datapoint (outside active window or gap &gt; ~5 months).
-        </p>
+        <p className="empty">{t('noDatapoint')}</p>
       )}
 
-      <h3>All metrics @ {dateLabel}</h3>
+      <h3>{t('allMetricsAt', { date: dateLabel })}</h3>
       <ul className="metric-list">
-        {(Object.keys(ww2Dataset.metricLabels) as Array<keyof typeof ww2Dataset.metricLabels>).map(
-          (m) => {
-            const p = metricAtYear(country!, m, fracYear)
-            return (
-              <li key={m}>
-                <span>{ww2Dataset.metricLabels[m].label}</span>
-                <span>
-                  {p ? (
-                    <>
-                      {p.value} {p.unit}
-                      {p.certainty === 'unsure' ? ' (unsure)' : ''}
-                      {p.provenance === 'interpolated' ? ' ~' : ''}
-                    </>
-                  ) : (
-                    '—'
-                  )}
-                </span>
-              </li>
-            )
-          },
-        )}
+        {(Object.keys(ww2Dataset.metricLabels) as MetricKey[]).map((m) => {
+          const p = metricAtYear(country!, m, fracYear)
+          return (
+            <li key={m}>
+              <span>{metricLabel(m)}</span>
+              <span>
+                {p ? (
+                  <>
+                    {formatNumber(p.value)} {p.unit}{' '}
+                    <EvidenceBadge
+                      level={adaptMetricPoint(p, m).level}
+                      storedUnsure={metricStoredUnsure(p)}
+                      onClick={() => setEvidence(adaptMetricPoint(p, m))}
+                    />
+                  </>
+                ) : (
+                  '—'
+                )}
+              </span>
+            </li>
+          )
+        })}
       </ul>
 
       {related.length > 0 && (
         <>
-          <h3>Related incidents</h3>
-          <p className="hint muted">
-            Linked by proximity or by naming this entity — only incidents already reached by the
-            scrubber. Each has Wikipedia + Grokipedia links.
-          </p>
+          <h3>{t('relatedIncidents')}</h3>
+          <p className="hint muted">{t('relatedHint')}</p>
           <ul className="related-list">
             {related.map((inc) => {
               const ext = incidentExternalLinks(inc.id, inc.title)
@@ -295,18 +431,22 @@ export function DetailPanel() {
                       const end = 1945 + 8 / 12
                       const y = inc.year + (inc.month - 1) / 12
                       setPlaying(false)
-                      setTime(Math.min(1, Math.max(0, (y - start) / (end - start))))
                       selectIncident(inc.id)
+                      setTime(Math.min(1, Math.max(0, (y - start) / (end - start))))
                     }}
                   >
-                    {inc.date} — {inc.title}
+                    {inc.date} — <Localized value={inc.title} />
                   </button>
                   {inc.certainty === 'unsure' && <span className="badge">unsure</span>}
                   <span className="related-ext">
                     {ext.map((l) => (
-                      <a key={l.url} href={l.url} target="_blank" rel="noreferrer">
+                      <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer">
                         {l.label}
+                        <span className="dest-type"> ({destinationType(l)})</span>
                         {l.certainty === 'unsure' ? ' ?' : ''}
+                        {l.url.includes('grokipedia.com')
+                          ? ' — AI 生成內容，請比對 / AI-generated — compare with other sources'
+                          : ''}
                       </a>
                     ))}
                   </span>

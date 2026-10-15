@@ -1,0 +1,55 @@
+.print-summary {
+  display: none;
+}
+
+@media print {
+  .print-summary {
+    display: block;
+    color: #111;
+    background: #fff;
+    padding: 0 0 1rem;
+  }
+
+  .print-summary h1,
+  .print-summary h2 {
+    font-family: Palatino, 'Palatino Linotype', serif;
+    font-size: 1.2rem;
+  }
+
+  .skip-link,
+  .play,
+  .flat-map-wrap,
+  .globe-wrap,
+  .list-view,
+  .locale-toggle,
+  canvas,
+  .edu-footer,
+  .lessons button,
+  .content-note {
+    display: none !important;
+  }
+
+  body,
+  .app,
+  .stage,
+  .side,
+  .detail,
+  .timeline {
+    background: #fff !important;
+    color: #111 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .stage {
+    grid-template-columns: 1fr !important;
+  }
+
+  .evidence-badge,
+  a {
+    color: #111 !important;
+    border-color: #333 !important;
+  }
+}

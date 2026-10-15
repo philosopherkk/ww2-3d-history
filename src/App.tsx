@@ -1,28 +1,14 @@
-import { Controls } from './components/Controls'
-import { DetailPanel } from './components/DetailPanel'
-import { FlatMap } from './components/FlatMap'
-import { Globe } from './components/Globe'
-import { PlayTicker } from './components/PlayTicker'
-import { SourcesModal } from './components/SourcesModal'
-import { Timeline } from './components/Timeline'
-import { useAppStore } from './state/appStore'
+import { lazy, Suspense } from 'react'
+import { Keybindings } from './components/Keybindings'
 import './App.css'
 
-export default function App() {
-  const mapMode = useAppStore((s) => s.mapMode)
+const AtlasShell = lazy(() => import('./AtlasShell'))
 
+export default function App() {
   return (
-    <div className="app">
-      <PlayTicker />
-      <Controls />
-      <main className="stage">
-        {mapMode === 'flat' ? <FlatMap /> : <Globe />}
-        <div className="side">
-          <Timeline />
-          <DetailPanel />
-        </div>
-      </main>
-      <SourcesModal />
-    </div>
+    <Suspense fallback={<p className="boot">Loading atlas… / 正在載入地圖…</p>}>
+      <Keybindings />
+      <AtlasShell />
+    </Suspense>
   )
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { resolveLocalized } from '../data/localize'
 import {
   countriesActiveAt,
   dateLabelFromFraction,
@@ -11,11 +12,15 @@ import {
 } from '../data/selectors'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { buildEarthCanvas, lonLatToMapFraction } from '../geo/earthMap'
+import { useLocale } from '../shared/i18n/useLocale'
+import { useT } from '../shared/i18n/translate'
 import { useAppStore } from '../state/appStore'
 
 type View = { x: number; y: number; scale: number }
 
 export function FlatMap() {
+  const t = useT()
+  const locale = useLocale((s) => s.locale)
   const time = useAppStore((s) => s.time)
   const detail = useAppStore((s) => s.detail)
   const metric = useAppStore((s) => s.metric)
@@ -101,9 +106,9 @@ export function FlatMap() {
 
   const pins = active.map((c) => {
     const point = metricAtYear(c, metric, year)!
-    const t = Math.min(1, point.value / max)
+    const sizeT = Math.min(1, point.value / max)
     const { x, y } = lonLatToMapFraction(c.lon, c.lat)
-    return { c, point, t, x, y }
+    return { c, point, sizeT, x, y }
   })
 
   return (
@@ -124,13 +129,13 @@ export function FlatMap() {
           }}
         >
           {mapUrl ? (
-            <img className="flat-map-img" src={mapUrl} alt="Equirectangular world map" draggable={false} />
+            <img className="flat-map-img" src={mapUrl} alt={t('mapAlt')} draggable={false} />
           ) : (
-            <div className="flat-map-loading">Loading Natural Earth basemap…</div>
+            <div className="flat-map-loading">{t('loadingMap')}</div>
           )}
 
           <div className="flat-map-pins">
-            {pins.map(({ c, point, t, x, y }) => {
+            {pins.map(({ c, point, sizeT, x, y }) => {
               const selected = selectedCountryId === c.id
               const hovered = hoveredCountryId === c.id
               const unsure = point.certainty === 'unsure'
@@ -142,12 +147,12 @@ export function FlatMap() {
                     : c.side === 'allies'
                       ? '#3a7ec4'
                       : '#8a8a6a'
-              const size = 8 + t * 14
+              const size = 8 + sizeT * 14
               return (
                 <button
                   key={c.id}
                   type="button"
-                  className={`map-pin map-pin-country ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`}
+                  className={`map-pin map-pin-country ${point.provenance === 'anchor' ? 'map-pin-anchor' : 'map-pin-estimated'} ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`}
                   style={{
                     left: `${x * 100}%`,
                     top: `${y * 100}%`,
@@ -156,8 +161,8 @@ export function FlatMap() {
                     background: color,
                     boxShadow: selected || hovered ? `0 0 0 3px ${color}` : undefined,
                   }}
-                  title={`${c.name} · ${point.value} ${point.unit}`}
-                  aria-label={`Country pin ${c.name}`}
+                  title={`${resolveLocalized(c.name, locale).text} · ${point.value} ${point.unit}`}
+                  aria-label={t('countryPin', { name: resolveLocalized(c.name, locale).text })}
                   onClick={(e) => {
                     e.stopPropagation()
                     selectCountry(c.id)
@@ -178,8 +183,8 @@ export function FlatMap() {
                   type="button"
                   className={`map-pin map-pin-incident ${selected ? 'selected' : ''} ${hovered ? 'hovered' : ''}`}
                   style={{ left: `${x * 100}%`, top: `${y * 100}%` }}
-                  title={`${inc.title} · ${inc.date}`}
-                  aria-label={`Incident pin ${inc.title}`}
+                  title={`${resolveLocalized(inc.title, locale).text} · ${inc.date}`}
+                  aria-label={t('incidentPin', { name: resolveLocalized(inc.title, locale).text })}
                   onClick={(e) => {
                     e.stopPropagation()
                     selectIncident(inc.id)
@@ -193,17 +198,24 @@ export function FlatMap() {
         </div>
       </div>
 
+      <p className="border-notice">Modern borders shown / 顯示為現代國界</p>
       <div className="globe-hud-stack flat-hud">
         <div className={`globe-hud ${focusC || focusI ? 'globe-hud--focus' : ''}`}>
           {focusC || focusI ? (
             <>
-              <span className="globe-hud-kind">{focusC ? 'Country / entity' : 'Incident'}</span>
-              <strong>{focusC?.name ?? focusI?.title}</strong>
+              <span className="globe-hud-kind">{focusC ? t('countryEntity') : t('incidentKind')}</span>
+              <strong>
+                {focusC
+                  ? resolveLocalized(focusC.name, locale).text
+                  : focusI
+                    ? resolveLocalized(focusI.title, locale).text
+                    : ''}
+              </strong>
               <span>
                 {dateLabelFromFraction(time)}
                 {focusC ? ` · ${involvementLabel(focusC.involvement)}` : ''}
                 {focusI && !focusC ? ` · ${focusI.date}` : ''}
-                {selectedCountryId || selectedIncidentId ? ' · selected' : ' · hover'}
+                {selectedCountryId || selectedIncidentId ? ` · ${t('selected')}` : ` · ${t('hover')}`}
               </span>
               {focusC &&
                 (() => {
@@ -220,9 +232,11 @@ export function FlatMap() {
           )}
         </div>
         <div className="globe-legend">
-          <span className="leg leg-country">● Country pin (on map)</span>
-          <span className="leg leg-incident">◆ Incident pin (on map)</span>
-          <span className="leg">Drag to pan · scroll to zoom</span>
+          <span className="leg leg-country">{t('legCountryOnMap')}</span>
+          <span className="leg leg-incident">{t('legIncidentOnMap')}</span>
+          <span className="leg">● {t('seriesAnchor')}</span>
+          <span className="leg">◐ {t('seriesInterpolated')}</span>
+          <span className="leg">{t('dragHint')}</span>
         </div>
       </div>
     </div>
