@@ -1,9 +1,21 @@
+let webGlSupported: boolean | null = null
+
 export function hasWebGL(): boolean {
+  if (webGlSupported !== null) return webGlSupported
   if (typeof document === 'undefined') return false
   try {
     const canvas = document.createElement('canvas')
-    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
+    if (!gl) {
+      webGlSupported = false
+      return false
+    }
+    const lose = gl.getExtension('WEBGL_lose_context')
+    lose?.loseContext()
+    webGlSupported = true
+    return true
   } catch {
+    webGlSupported = false
     return false
   }
 }

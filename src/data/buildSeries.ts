@@ -1,3 +1,4 @@
+import { ALIGNMENT_BY_ID, defaultAlignment } from './countryAlignment'
 import type {
   Certainty,
   Country,
@@ -86,6 +87,7 @@ function densifyMetric(
         certainty: exact.certainty,
         note: exact.note,
         provenance: 'anchor',
+        sourceIds: exact.sourceIds,
       })
       continue
     }
@@ -133,6 +135,7 @@ function densifyMetric(
         certainty: left.certainty,
         note: left.note,
         provenance: 'anchor',
+        sourceIds: left.sourceIds,
       })
       continue
     }
@@ -185,6 +188,7 @@ export function buildCountry(spec: CountrySpec, globalFrom: string, globalTo: st
     lon: spec.lon,
     side: spec.side,
     involvement: spec.involvement,
+    alignment: ALIGNMENT_BY_ID[spec.id] ?? defaultAlignment(spec),
     roleNote: spec.roleNote,
     cadence: spec.cadence,
     metrics,

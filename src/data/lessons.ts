@@ -1,27 +1,34 @@
 import type { LocalizedText } from '../shared/i18n/types'
-
-const START = 1937 + 6 / 12
-const END = 1945 + 8 / 12
-
-function lessonTime(year: number, month: number): number {
-  const y = year + (month - 1) / 12
-  return Math.min(1, Math.max(0, (y - START) / (END - START)))
-}
+import { incidents } from './incidents'
+import { incidentsVisible } from './selectors'
+import type { DetailLevel, MetricKey } from './types'
+import { tFromIsoDate, yearFromFraction } from './timeScale'
 
 export interface Lesson {
   id: string
   incidentId: string
+  /** Additional incident pins shown for multi-stop lessons (e.g. Hiroshima + Nagasaki). */
+  incidentIds?: string[]
   t: number
+  detail?: DetailLevel
+  metric?: MetricKey
   title: LocalizedText
   /** One neutral, source-based prompt. No new casualty figures. */
   prompt: LocalizedText
+}
+
+function lessonTimeFromIncident(incidentId: string): number {
+  const inc = incidents.find((i) => i.id === incidentId)
+  if (!inc) return 0
+  return tFromIsoDate(inc.date)
 }
 
 export const lessons: Lesson[] = [
   {
     id: 'marco-polo-1937',
     incidentId: 'marco-polo',
-    t: lessonTime(1937, 7),
+    t: lessonTimeFromIncident('marco-polo'),
+    detail: 'standard',
     title: {
       en: 'Marco Polo Bridge, 1937',
       zhHant: '七七事變/盧溝橋事變，1937',
@@ -37,7 +44,8 @@ export const lessons: Lesson[] = [
   {
     id: 'barbarossa-1941',
     incidentId: 'barbarossa',
-    t: lessonTime(1941, 6),
+    t: lessonTimeFromIncident('barbarossa'),
+    detail: 'overview',
     title: {
       en: 'Barbarossa, 1941',
       zhHant: '巴巴羅薩行動，1941',
@@ -53,7 +61,8 @@ export const lessons: Lesson[] = [
   {
     id: 'pearl-harbor-1941',
     incidentId: 'pearl-harbor',
-    t: lessonTime(1941, 12),
+    t: lessonTimeFromIncident('pearl-harbor'),
+    detail: 'overview',
     title: {
       en: 'Pearl Harbor, 1941',
       zhHant: '珍珠港事件，1941',
@@ -69,7 +78,8 @@ export const lessons: Lesson[] = [
   {
     id: 'stalingrad-1942',
     incidentId: 'stalingrad',
-    t: lessonTime(1942, 8),
+    t: lessonTimeFromIncident('stalingrad'),
+    detail: 'overview',
     title: {
       en: 'Stalingrad, 1942–43',
       zhHant: '史達林格勒戰役，1942–43',
@@ -85,7 +95,9 @@ export const lessons: Lesson[] = [
   {
     id: 'hiroshima-nagasaki-1945',
     incidentId: 'hiroshima',
-    t: lessonTime(1945, 8),
+    incidentIds: ['hiroshima', 'nagasaki'],
+    t: lessonTimeFromIncident('hiroshima'),
+    detail: 'standard',
     title: {
       en: 'Hiroshima and Nagasaki, 1945',
       zhHant: '廣島與長崎，1945',
@@ -99,3 +111,18 @@ export const lessons: Lesson[] = [
     },
   },
 ]
+
+export function lessonIncidentVisible(lessonId: string, detail: DetailLevel, time: number): boolean {
+  const lesson = lessons.find((l) => l.id === lessonId)
+  if (!lesson) return false
+  const year = yearFromFraction(time)
+  const visible = incidentsVisible(detail, year)
+  if (!visible.some((i) => i.id === lesson.incidentId)) return false
+  if (!lesson.incidentIds?.length) return true
+  return lesson.incidentIds.every((id) => {
+    const inc = incidents.find((i) => i.id === id)
+    if (!inc) return false
+    const at = incidentsVisible(detail, inc.year + (inc.month - 1) / 12)
+    return at.some((i) => i.id === id)
+  })
+}

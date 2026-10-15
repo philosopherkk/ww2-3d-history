@@ -5,5 +5,5 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   // GitHub Pages project site: https://philosopherkk.github.io/ww2-3d-history/
-  base: '/ww2-3d-history/',
+  base: process.env.VITE_BASE ?? '/ww2-3d-history/',
 })

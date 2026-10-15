@@ -1,6 +1,7 @@
 import { buildCountries } from './buildSeries'
 import { countrySpecs } from './countryRoster'
 import { incidents } from './incidents'
+import { END, START } from './timeScale'
 import type { DataCatalog } from './types'
 
 const countries = buildCountries(countrySpecs, '1937-07', '1945-09')
@@ -18,8 +19,8 @@ export const ww2Dataset: DataCatalog = {
 
   series: {
     defaultCadence: 'weekly',
-    startYear: 1937 + 6 / 12,
-    endYear: 1945 + 8 / 12,
+    startYear: START,
+    endYear: END,
     note:
       'Eight major combatants use weekly densification from sparse anchors (interpolated points are approximate/unsure — never treated as measured weekly statistics). Key secondary combatants use monthly cadence; remaining participants use quarterly. Gaps outside each country’s active window are omitted (not invented).',
   },

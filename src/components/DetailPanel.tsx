@@ -312,7 +312,7 @@ export function DetailPanel() {
   }
 
   const point = country ? metricAtYear(country, metric, fracYear) : null
-  const brief = countryBriefing(country!, detail, fracYear, metric, dateLabel)
+  const brief = countryBriefing(country!, detail, fracYear, metric, dateLabel, time)
   const related = relatedIncidentsForCountry(country!, fracYear, detail)
   const folks = peopleForCountry(country!.id)
 

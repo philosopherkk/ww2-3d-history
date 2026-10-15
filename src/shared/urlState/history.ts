@@ -10,8 +10,12 @@ export function applySearch(search: string, mode: HistoryMode) {
   const next = `${window.location.pathname}${search}${window.location.hash}`
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
   if (next === current) return
-  if (mode === 'push') window.history.pushState(null, '', next)
-  else window.history.replaceState(null, '', next)
+  try {
+    if (mode === 'push') window.history.pushState(null, '', next)
+    else window.history.replaceState(null, '', next)
+  } catch (err) {
+    console.warn('history write failed', err)
+  }
 }
 
 export function onPopState(listener: () => void): () => void {

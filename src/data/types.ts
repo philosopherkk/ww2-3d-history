@@ -26,6 +26,12 @@ export type Involvement =
 
 export type SeriesCadence = 'weekly' | 'monthly' | 'quarterly'
 
+export interface AlignmentSegment {
+  from: string
+  side: Side
+  involvement: Involvement
+}
+
 export interface MetricPoint {
   /** Fractional calendar year (e.g. 1939 + 8/12 = Sep 1939). */
   year: number
@@ -35,6 +41,8 @@ export interface MetricPoint {
   note?: string | LocalizedText
   /** How this point was produced. */
   provenance?: 'anchor' | 'interpolated' | 'held' | 'gap'
+  /** Catalog source ids backing this anchor (required when certainty is certain). */
+  sourceIds?: string[]
 }
 
 export interface Country {
@@ -44,6 +52,8 @@ export interface Country {
   lon: number
   side: Side
   involvement: Involvement
+  /** Time-varying alliance for map colouring and labels. */
+  alignment: AlignmentSegment[]
   /** Short factual note on wartime role. */
   roleNote: LocalizedText
   /** Preferred dense series cadence for this country. */
@@ -88,6 +98,7 @@ export interface MetricAnchor {
   value: number
   certainty: Certainty
   note?: LocalizedText
+  sourceIds?: string[]
 }
 
 export interface CountrySpec {
