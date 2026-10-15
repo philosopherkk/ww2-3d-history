@@ -22,7 +22,7 @@ export type Involvement =
   | 'dominion'
   | 'late-declarant'
 
-export type SeriesCadence = 'monthly' | 'quarterly'
+export type SeriesCadence = 'weekly' | 'monthly' | 'quarterly'
 
 export interface MetricPoint {
   /** Fractional calendar year (e.g. 1939 + 8/12 = Sep 1939). */

@@ -21,7 +21,8 @@ export function SourcesModal() {
           </button>
         </div>
         <p>
-          Figures are teaching estimates densified to monthly (major combatants) or quarterly
+          Figures are teaching estimates densified to weekly (major combatants), monthly (key
+          secondaries), or quarterly
           (others) from sparse published anchors — not a research database. Interpolated / held
           points are never marked <em>certain</em>. Values marked{' '}
           <span className="unsure">unsure</span> are debated, method-dependent, occupied/partitioned,

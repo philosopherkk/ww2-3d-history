@@ -30,7 +30,16 @@ export function formatYearMonth(frac: number): string {
 }
 
 function cadenceStep(cadence: SeriesCadence): number {
-  return cadence === 'monthly' ? 1 / 12 : 3 / 12
+  if (cadence === 'weekly') return 1 / 52
+  if (cadence === 'monthly') return 1 / 12
+  return 3 / 12
+}
+
+/** Snap fractional years so dense timelines stay stable across float drift. */
+function snapTimeline(t: number, cadence: SeriesCadence): number {
+  if (cadence === 'weekly') return Math.round(t * 52) / 52
+  if (cadence === 'monthly') return Math.round(t * 12) / 12
+  return Math.round(t * 4) / 4
 }
 
 function enumerateTimeline(from: string, to: string, cadence: SeriesCadence): number[] {
@@ -39,7 +48,7 @@ function enumerateTimeline(from: string, to: string, cadence: SeriesCadence): nu
   const step = cadenceStep(cadence)
   const out: number[] = []
   for (let t = start; t <= end + 1e-9; t += step) {
-    out.push(Math.round(t * 12) / 12)
+    out.push(snapTimeline(t, cadence))
   }
   return out
 }

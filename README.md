@@ -22,9 +22,11 @@ Vite · React · TypeScript · Three.js · React Three Fiber · Zustand
 
 ## Data
 
-- Compact anchors: `src/data/countryRoster.ts` (**65** participants)
-- Densifier: `src/data/buildSeries.ts` → monthly (8 majors) / quarterly (others)
-- Catalog: `src/data/ww2Dataset.ts` (~8.5k metric points) with `unsure` / `approximate` and provenance flags
+- Compact anchors: `src/data/countryRoster.ts` (**84** participants / entities)
+- Incidents: `src/data/incidents.ts` (**108** critical incidents, Jul 1937 → Sep 1945)
+- Densifier: `src/data/buildSeries.ts` → weekly (8 majors) / monthly (10 secondaries) / quarterly (others)
+- Catalog: `src/data/ww2Dataset.ts` (~25k metric points) with `unsure` / `approximate` and provenance flags
+- Weekly/monthly dense points are **interpolated teaching series**, not archival weekly statistics
 
 See in-app **Sources** and the project plan.
 

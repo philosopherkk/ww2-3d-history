@@ -17,11 +17,11 @@ export const ww2Dataset: DataCatalog = {
   },
 
   series: {
-    defaultCadence: 'monthly',
+    defaultCadence: 'weekly',
     startYear: 1937 + 6 / 12,
     endYear: 1945 + 8 / 12,
     note:
-      'Major combatants use monthly densification from multi-year anchors; other participants use quarterly cadence. Gaps outside each country’s active window are omitted (not invented).',
+      'Eight major combatants use weekly densification from sparse anchors (interpolated points are approximate/unsure — never treated as measured weekly statistics). Key secondary combatants use monthly cadence; remaining participants use quarterly. Gaps outside each country’s active window are omitted (not invented).',
   },
 
   metricLabels: {
@@ -95,6 +95,19 @@ export const ww2Dataset: DataCatalog = {
         'United Nations / wartime declaration lists — late declarants and Latin American entry dates (teaching compilation).',
       covers: 'late-declarant active windows',
     },
+    {
+      id: 'official-histories',
+      citation:
+        'National Official Histories (UK Cabinet Office / US Army CMH / Australian War Memorial summaries) — campaign chronology cross-check for incident dates.',
+      covers: 'incidents',
+    },
+    {
+      id: 'yale-avalon',
+      citation:
+        'Yale Law School Avalon Project — wartime treaties, armistice instruments, and conference communiqués (dates).',
+      url: 'https://avalon.law.yale.edu/subject_menus/wwii.asp',
+      covers: 'incidents (diplomatic)',
+    },
   ],
 
   countries,
@@ -103,8 +116,10 @@ export const ww2Dataset: DataCatalog = {
 
 export const datasetStats = {
   countryCount: countries.length,
+  weeklyCountries: countries.filter((c) => c.cadence === 'weekly').length,
   monthlyCountries: countries.filter((c) => c.cadence === 'monthly').length,
   quarterlyCountries: countries.filter((c) => c.cadence === 'quarterly').length,
+  incidentCount: incidents.length,
   totalMetricPoints: countries.reduce(
     (n, c) => n + Object.values(c.metrics).reduce((m, pts) => m + pts.length, 0),
     0,
