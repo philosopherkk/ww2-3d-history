@@ -6,12 +6,15 @@ import {
   countriesActiveAt,
   dateLabelFromFraction,
   incidentsVisible,
+  involvementLabel,
   latLonToVec3,
   maxMetricValue,
   metricAtYear,
   pointStamp,
   yearFromFraction,
 } from '../data/selectors'
+import { ww2Dataset } from '../data/ww2Dataset'
+import { paintEarthMap } from '../geo/earthMap'
 import { useAppStore } from '../state/appStore'
 import type { Country, Incident } from '../data/types'
 
@@ -19,117 +22,146 @@ const R = 2.2
 
 function Earth() {
   const tex = useMemo(() => {
-    // Procedural simple Earth-ish texture via canvas (no external assets)
-    const size = 1024
-    const canvas = document.createElement('canvas')
-    canvas.width = size
-    canvas.height = size
-    const ctx = canvas.getContext('2d')!
-    const g = ctx.createLinearGradient(0, 0, 0, size)
-    g.addColorStop(0, '#1a3a5c')
-    g.addColorStop(0.5, '#1e4d3a')
-    g.addColorStop(1, '#1a3a5c')
-    ctx.fillStyle = g
-    ctx.fillRect(0, 0, size, size)
-
-    // crude continents as darker blobs
-    ctx.fillStyle = '#3d5c3a'
-    const blobs = [
-      [280, 320, 140, 100],
-      [420, 280, 90, 120],
-      [520, 400, 70, 90],
-      [700, 300, 160, 80],
-      [780, 420, 100, 110],
-      [200, 520, 80, 140],
-      [850, 550, 60, 50],
-    ]
-    for (const [x, y, w, h] of blobs) {
-      ctx.beginPath()
-      ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2)
-      ctx.fill()
-    }
-
-    // grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)'
-    ctx.lineWidth = 1
-    for (let i = 0; i < 18; i++) {
-      const y = (i / 18) * size
-      ctx.beginPath()
-      ctx.moveTo(0, y)
-      ctx.lineTo(size, y)
-      ctx.stroke()
-    }
-    for (let i = 0; i < 36; i++) {
-      const x = (i / 36) * size
-      ctx.beginPath()
-      ctx.moveTo(x, 0)
-      ctx.lineTo(x, size)
-      ctx.stroke()
-    }
-
+    const canvas = paintEarthMap(1536)
     const texture = new THREE.CanvasTexture(canvas)
     texture.colorSpace = THREE.SRGBColorSpace
+    texture.anisotropy = 4
     return texture
   }, [])
 
   return (
     <mesh>
-      <sphereGeometry args={[R, 64, 64]} />
-      <meshStandardMaterial map={tex} roughness={0.85} metalness={0.05} />
+      <sphereGeometry args={[R, 96, 96]} />
+      <meshStandardMaterial map={tex} roughness={0.88} metalness={0.04} />
     </mesh>
+  )
+}
+
+function Atmosphere() {
+  return (
+    <mesh>
+      <sphereGeometry args={[R * 1.018, 64, 64]} />
+      <meshBasicMaterial
+        color="#6aa0c8"
+        transparent
+        opacity={0.07}
+        side={THREE.BackSide}
+        depthWrite={false}
+      />
+    </mesh>
+  )
+}
+
+function MarkerLabel({
+  title,
+  lines,
+  kind,
+}: {
+  title: string
+  lines: string[]
+  kind: 'country' | 'incident'
+}) {
+  return (
+    <div className={`globe-label globe-label--${kind}`}>
+      <div className="globe-label-kind">
+        {kind === 'country' ? 'Country / entity metric' : 'Critical incident'}
+      </div>
+      <strong>{title}</strong>
+      {lines.map((l) => (
+        <div key={l}>{l}</div>
+      ))}
+    </div>
   )
 }
 
 function CountryMarker({ country, year }: { country: Country; year: number }) {
   const metric = useAppStore((s) => s.metric)
   const selected = useAppStore((s) => s.selectedCountryId === country.id)
+  const hovered = useAppStore((s) => s.hoveredCountryId === country.id)
   const selectCountry = useAppStore((s) => s.selectCountry)
+  const setHoveredCountry = useAppStore((s) => s.setHoveredCountry)
+  const time = useAppStore((s) => s.time)
   const point = metricAtYear(country, metric, year)
-  if (!point) return null
   const max = maxMetricValue(metric, year)
-  const [x, y, z] = latLonToVec3(country.lat, country.lon, R + 0.02)
+
+  const pos = useMemo(
+    () => latLonToVec3(country.lat, country.lon, R + 0.02),
+    [country.lat, country.lon],
+  )
+  const dir = useMemo(() => new THREE.Vector3(...pos).normalize(), [pos])
+
+  if (!point) return null
+
   const h = 0.12 + (point.value / max) * 0.75
   const color =
     country.side === 'axis' ? '#c45c3a' : country.side === 'allies' ? '#3a7ec4' : '#8a8a6a'
   const unsure = point.certainty === 'unsure'
+  const showLabel = selected || hovered
+  const [x, y, z] = pos
 
   return (
     <group position={[x, y, z]}>
+      {/* Large invisible hit target — every metric pin is clickable */}
       <mesh
         onClick={(e) => {
           e.stopPropagation()
           selectCountry(country.id)
         }}
-        onPointerOver={() => {
+        onPointerOver={(e) => {
+          e.stopPropagation()
           document.body.style.cursor = 'pointer'
+          setHoveredCountry(country.id)
         }}
         onPointerOut={() => {
           document.body.style.cursor = 'default'
+          setHoveredCountry(null)
         }}
       >
-        <sphereGeometry args={[0.045 + (selected ? 0.02 : 0), 16, 16]} />
+        <sphereGeometry args={[0.11, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <mesh scale={selected || hovered ? 1.35 : 1}>
+        <sphereGeometry args={[0.048, 20, 20]} />
         <meshStandardMaterial
           color={selected ? '#f0e6c8' : color}
-          emissive={selected ? '#665522' : '#000000'}
+          emissive={selected || hovered ? '#665522' : '#000000'}
+          emissiveIntensity={selected ? 0.45 : hovered ? 0.25 : 0}
+        />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.055, selected || hovered ? 0.09 : 0.072, 24]} />
+        <meshBasicMaterial
+          color={selected ? '#f0e6c8' : color}
+          transparent
+          opacity={selected || hovered ? 0.85 : 0.45}
+          side={THREE.DoubleSide}
+          depthWrite={false}
         />
       </mesh>
       <RadialBar
-        dir={new THREE.Vector3(x, y, z).normalize()}
+        dir={dir}
         height={h}
         color={unsure ? '#c4a03a' : color}
-        selected={selected}
+        selected={selected || hovered}
         onSelect={() => selectCountry(country.id)}
+        onHover={(v) => setHoveredCountry(v ? country.id : null)}
       />
-      {selected && (
-        <Html distanceFactor={8} position={[0, 0.2, 0]} style={{ pointerEvents: 'none' }}>
-          <div className="globe-label">
-            {country.name}
-            <br />
-            {point.value} {point.unit}
-            <br />
-            {pointStamp(point)} · {point.certainty}
-            {point.provenance && point.provenance !== 'anchor' ? ` · ${point.provenance}` : ''}
-          </div>
+      {showLabel && (
+        <Html
+          distanceFactor={7.5}
+          position={[0, 0.22, 0]}
+          style={{ pointerEvents: 'none' }}
+          zIndexRange={[20, 0]}
+        >
+          <MarkerLabel
+            kind="country"
+            title={country.name}
+            lines={[
+              dateLabelFromFraction(time),
+              involvementLabel(country.involvement),
+              `${point.value} ${point.unit} · ${pointStamp(point)} · ${point.certainty}`,
+            ]}
+          />
         </Html>
       )}
     </group>
@@ -142,14 +174,16 @@ function RadialBar({
   color,
   selected,
   onSelect,
+  onHover,
 }: {
   dir: THREE.Vector3
   height: number
   color: string
   selected: boolean
   onSelect: () => void
+  onHover: (v: boolean) => void
 }) {
-  const geom = useMemo(() => new THREE.CylinderGeometry(0.025, 0.035, 1, 8), [])
+  const geom = useMemo(() => new THREE.CylinderGeometry(0.028, 0.038, 1, 10), [])
   const pos = dir.clone().multiplyScalar(R + height / 2)
   const quat = new THREE.Quaternion()
   quat.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize())
@@ -158,19 +192,28 @@ function RadialBar({
     <mesh
       position={pos}
       quaternion={quat}
-      scale={[selected ? 1.3 : 1, height, selected ? 1.3 : 1]}
+      scale={[selected ? 1.35 : 1, height, selected ? 1.35 : 1]}
       geometry={geom}
       onClick={(e) => {
         e.stopPropagation()
         onSelect()
       }}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        document.body.style.cursor = 'pointer'
+        onHover(true)
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = 'default'
+        onHover(false)
+      }}
     >
       <meshStandardMaterial
         color={color}
         transparent
-        opacity={0.85}
+        opacity={0.88}
         emissive={selected ? color : '#000000'}
-        emissiveIntensity={selected ? 0.25 : 0}
+        emissiveIntensity={selected ? 0.3 : 0}
       />
     </mesh>
   )
@@ -178,30 +221,72 @@ function RadialBar({
 
 function IncidentMarker({ incident }: { incident: Incident }) {
   const selected = useAppStore((s) => s.selectedIncidentId === incident.id)
+  const hovered = useAppStore((s) => s.hoveredIncidentId === incident.id)
   const selectIncident = useAppStore((s) => s.selectIncident)
-  const [x, y, z] = latLonToVec3(incident.lat, incident.lon, R + 0.06)
+  const setHoveredIncident = useAppStore((s) => s.setHoveredIncident)
+  const time = useAppStore((s) => s.time)
+  const [x, y, z] = latLonToVec3(incident.lat, incident.lon, R + 0.07)
+  const showLabel = selected || hovered
 
   return (
-    <mesh
-      position={[x, y, z]}
-      onClick={(e) => {
-        e.stopPropagation()
-        selectIncident(incident.id)
-      }}
-      onPointerOver={() => {
-        document.body.style.cursor = 'pointer'
-      }}
-      onPointerOut={() => {
-        document.body.style.cursor = 'default'
-      }}
-    >
-      <octahedronGeometry args={[selected ? 0.07 : 0.05, 0]} />
-      <meshStandardMaterial
-        color={selected ? '#f5d76e' : '#e8c547'}
-        emissive="#a08020"
-        emissiveIntensity={selected ? 0.6 : 0.25}
-      />
-    </mesh>
+    <group position={[x, y, z]}>
+      <mesh
+        onClick={(e) => {
+          e.stopPropagation()
+          selectIncident(incident.id)
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation()
+          document.body.style.cursor = 'pointer'
+          setHoveredIncident(incident.id)
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = 'default'
+          setHoveredIncident(null)
+        }}
+      >
+        <sphereGeometry args={[0.12, 12, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <mesh scale={selected || hovered ? 1.25 : 1}>
+        <octahedronGeometry args={[selected || hovered ? 0.065 : 0.05, 0]} />
+        <meshStandardMaterial
+          color={selected ? '#fff1a8' : '#e8c547'}
+          emissive="#a08020"
+          emissiveIntensity={selected ? 0.75 : hovered ? 0.5 : 0.28}
+        />
+      </mesh>
+      {(selected || hovered) && (
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[0.08, 0.11, 20]} />
+          <meshBasicMaterial
+            color="#f5d76e"
+            transparent
+            opacity={0.7}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+      )}
+      {showLabel && (
+        <Html
+          distanceFactor={7.5}
+          position={[0, 0.18, 0]}
+          style={{ pointerEvents: 'none' }}
+          zIndexRange={[20, 0]}
+        >
+          <MarkerLabel
+            kind="incident"
+            title={incident.title}
+            lines={[
+              incident.date,
+              `Scrubber · ${dateLabelFromFraction(time)}`,
+              'Incident pin (not a metric bar)',
+            ]}
+          />
+        </Html>
+      )}
+    </group>
   )
 }
 
@@ -229,11 +314,12 @@ function SceneContent() {
 
   return (
     <>
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[5, 3, 2]} intensity={1.2} />
-      <directionalLight position={[-3, -1, -2]} intensity={0.25} />
-      <Stars radius={80} depth={40} count={2000} factor={3} saturation={0} fade speed={0.4} />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[5, 3, 2]} intensity={1.25} />
+      <directionalLight position={[-3, -1, -2]} intensity={0.28} />
+      <Stars radius={80} depth={40} count={2200} factor={3} saturation={0} fade speed={0.4} />
       <Earth />
+      <Atmosphere />
       {active.map((c) => (
         <CountryMarker key={c.id} country={c} year={year} />
       ))}
@@ -247,20 +333,71 @@ function SceneContent() {
         maxDistance={10}
         rotateSpeed={0.55}
         zoomSpeed={0.7}
+        makeDefault
       />
     </>
   )
 }
 
-export function Globe() {
+function SelectionHud() {
   const time = useAppStore((s) => s.time)
+  const countryId = useAppStore((s) => s.selectedCountryId)
+  const incidentId = useAppStore((s) => s.selectedIncidentId)
+  const hoveredCountryId = useAppStore((s) => s.hoveredCountryId)
+  const hoveredIncidentId = useAppStore((s) => s.hoveredIncidentId)
+
+  const focusCountryId = countryId ?? hoveredCountryId
+  const focusIncidentId = incidentId ?? hoveredIncidentId
+  const c = focusCountryId
+    ? ww2Dataset.countries.find((x) => x.id === focusCountryId)
+    : null
+  const inc = focusIncidentId
+    ? ww2Dataset.incidents.find((x) => x.id === focusIncidentId)
+    : null
+  const sticky = Boolean(countryId || incidentId)
+
+  if (!c && !inc) {
+    return (
+      <div className="globe-hud-stack">
+        <div className="globe-hud">{dateLabelFromFraction(time)}</div>
+        <div className="globe-legend">
+          <span className="leg leg-country">● Country metric pin + bar</span>
+          <span className="leg leg-incident">◆ Incident pin</span>
+          <span className="leg">Amber bar = unsure</span>
+        </div>
+        <p className="globe-hint">Hover or click any pin — learning panel opens for that date.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="globe-hud-stack">
+      <div className="globe-hud globe-hud--focus">
+        <span className="globe-hud-kind">{c ? 'Country / entity' : 'Incident'}</span>
+        <strong>{c?.name ?? inc?.title}</strong>
+        <span>
+          {dateLabelFromFraction(time)}
+          {c ? ` · ${involvementLabel(c.involvement)}` : ''}
+          {inc && !c ? ` · ${inc.date}` : ''}
+          {sticky ? ' · selected' : ' · hover'}
+        </span>
+      </div>
+      <div className="globe-legend">
+        <span className="leg leg-country">● Country metric pin + bar</span>
+        <span className="leg leg-incident">◆ Incident pin</span>
+      </div>
+    </div>
+  )
+}
+
+export function Globe() {
   return (
     <div className="globe-wrap">
       <Canvas camera={{ position: [0, 1.2, 5.2], fov: 42 }} dpr={[1, 2]}>
         <color attach="background" args={['#0b1220']} />
         <SceneContent />
       </Canvas>
-      <div className="globe-hud">{dateLabelFromFraction(time)}</div>
+      <SelectionHud />
     </div>
   )
 }

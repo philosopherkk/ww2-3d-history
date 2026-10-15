@@ -1,4 +1,12 @@
-import type { Country, DetailLevel, Incident, MetricKey, MetricPoint } from './types'
+import type {
+  Country,
+  DetailLevel,
+  Incident,
+  Involvement,
+  MetricKey,
+  MetricPoint,
+  Side,
+} from './types'
 import { ww2Dataset } from './ww2Dataset'
 import { formatYearMonth } from './buildSeries'
 
@@ -6,6 +14,23 @@ const DETAIL_RANK: Record<DetailLevel, number> = {
   overview: 0,
   standard: 1,
   deep: 2,
+}
+
+const INVOLVEMENT_LABEL: Record<Involvement, string> = {
+  allies: 'Allied combatant',
+  axis: 'Axis combatant',
+  'co-belligerent': 'Co-belligerent (fought alongside a major alliance without full membership)',
+  puppet: 'Client / puppet regime (limited sovereignty)',
+  occupied: 'Occupied or annexed territory in this dataset window',
+  'government-in-exile': 'Government-in-exile (homeland under occupation)',
+  dominion: 'British Dominion / Commonwealth partner',
+  'late-declarant': 'Late declarant of war (often limited or no combat)',
+}
+
+const SIDE_LABEL: Record<Side, string> = {
+  allies: 'Allies (globe colour)',
+  axis: 'Axis (globe colour)',
+  other: 'Other / mixed (globe colour)',
 }
 
 /** Max gap (years) when picking nearest dense point — ~5 months. */
@@ -85,4 +110,162 @@ export function latLonToVec3(lat: number, lon: number, radius: number): [number,
 
 export function pointStamp(point: MetricPoint): string {
   return formatYearMonth(point.year)
+}
+
+export function involvementLabel(inv: Involvement): string {
+  return INVOLVEMENT_LABEL[inv]
+}
+
+export function sideLabel(side: Side): string {
+  return SIDE_LABEL[side]
+}
+
+/** Approximate great-circle distance in km (teaching proximity only). */
+export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)))
+}
+
+function incidentYearFrac(i: Incident): number {
+  return i.year + (i.month - 1) / 12
+}
+
+function nameMentioned(text: string, country: Country): boolean {
+  const hay = text.toLowerCase()
+  const name = country.name.toLowerCase()
+  if (hay.includes(name)) return true
+  // Short aliases used in titles (factual string match only)
+  const aliases: Record<string, string[]> = {
+    deu: ['germany', 'german', 'reich'],
+    usa: ['united states', 'u.s.', 'america', 'american'],
+    gbr: ['britain', 'british', 'uk ', 'u.k.', 'england'],
+    sun: ['soviet', 'ussr', 'russia', 'russian'],
+    jpn: ['japan', 'japanese'],
+    ita: ['italy', 'italian'],
+    fra: ['france', 'french'],
+    chn: ['china', 'chinese'],
+    pol: ['poland', 'polish'],
+  }
+  return (aliases[country.id] ?? []).some((a) => hay.includes(a))
+}
+
+/** Incidents near a country (geo or name) that have occurred by scrubber year. */
+export function relatedIncidentsForCountry(
+  country: Country,
+  year: number,
+  detail: DetailLevel,
+  limit = 8,
+): Incident[] {
+  const rank = DETAIL_RANK[detail]
+  const scored = ww2Dataset.incidents
+    .filter((i) => DETAIL_RANK[i.minDetail] <= rank && incidentYearFrac(i) <= year + 0.05)
+    .map((i) => {
+      const dist = haversineKm(country.lat, country.lon, i.lat, i.lon)
+      const mentioned = nameMentioned(
+        `${i.title} ${i.summaryOverview} ${i.summaryStandard}`,
+        country,
+      )
+      const geoHit = dist < 900
+      if (!geoHit && !mentioned) return null
+      const timeDist = Math.abs(incidentYearFrac(i) - year)
+      const score = (mentioned ? 0 : 1) + dist / 4000 + timeDist * 0.35
+      return { i, score }
+    })
+    .filter((x): x is { i: Incident; score: number } => x != null)
+    .sort((a, b) => a.score - b.score)
+  return scored.slice(0, limit).map((s) => s.i)
+}
+
+/** Countries near an incident (active at scrubber year). */
+export function relatedCountriesForIncident(
+  incident: Incident,
+  year: number,
+  metric: MetricKey,
+  limit = 6,
+): Country[] {
+  return countriesActiveAt(year, metric)
+    .map((c) => ({ c, d: haversineKm(incident.lat, incident.lon, c.lat, c.lon) }))
+    .filter((x) => x.d < 1200)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, limit)
+    .map((x) => x.c)
+}
+
+export interface CountryBriefing {
+  markerExplainer: string
+  statusLine: string
+  paragraphs: string[]
+}
+
+/**
+ * Time-aware country learning copy composed from roster fields + metrics.
+ * Does not invent events — only restates involvement, roleNote, and measured/approx points.
+ */
+export function countryBriefing(
+  country: Country,
+  detail: DetailLevel,
+  year: number,
+  metric: MetricKey,
+  dateLabel: string,
+): CountryBriefing {
+  const point = metricAtYear(country, metric, year)
+  const markerExplainer =
+    'This map marker is a country / entity metric pin: the sphere marks the teaching location; the radial bar shows the selected metric at the scrubber date.'
+
+  const statusLine = `${involvementLabel(country.involvement)} · ${sideLabel(country.side)} · ${dateLabel}`
+
+  const overview = [
+    `${country.name} appears in this atlas as a wartime participant entity.`,
+    country.roleNote,
+    point
+      ? `At ${dateLabel}, ${ww2Dataset.metricLabels[metric].label.toLowerCase()} is about ${point.value} ${point.unit} (${point.certainty}${point.provenance && point.provenance !== 'anchor' ? `, ${point.provenance}` : ''}).`
+      : `At ${dateLabel}, this entity has no datapoint for the selected metric (outside its active window or beyond the nearest-point gap).`,
+  ]
+
+  if (detail === 'overview') {
+    return { markerExplainer, statusLine, paragraphs: overview }
+  }
+
+  const standard = [
+    ...overview,
+    `Series cadence for this entity: ${country.cadence} densification from sparse anchors — interpolated points stay approximate/unsure and are never upgraded to “certain”.`,
+    point?.note ? `Metric note at nearest stamp: ${point.note}` : null,
+  ].filter(Boolean) as string[]
+
+  if (detail === 'standard') {
+    return { markerExplainer, statusLine, paragraphs: standard }
+  }
+
+  const deep = [
+    ...standard,
+    'Deep view lists every metric layer at the scrubber date below, plus linked incidents that are geographically near this pin or that name this entity in their teaching summaries.',
+    'Treat occupied, puppet, and late-declarant figures cautiously — national accounts and force totals often double-count metropolitan powers or remain unsure.',
+  ]
+
+  return { markerExplainer, statusLine, paragraphs: deep }
+}
+
+export interface IncidentBriefing {
+  markerExplainer: string
+  statusLine: string
+  body: string
+}
+
+export function incidentBriefing(
+  incident: Incident,
+  detail: DetailLevel,
+  dateLabel: string,
+): IncidentBriefing {
+  return {
+    markerExplainer:
+      'This map marker is a critical-incident pin (diamond). It marks where a dated event is taught on the globe — not a country metric bar.',
+    statusLine: `${incident.date}${incident.year < 1939 ? ' · Asian/European prelude (pre-Sep 1939)' : ''} · scrubber ${dateLabel}${incident.certainty === 'unsure' ? ' · unsure' : ''}`,
+    body: incidentSummary(incident, detail),
+  }
 }
