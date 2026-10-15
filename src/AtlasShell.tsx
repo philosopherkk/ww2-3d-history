@@ -2,10 +2,13 @@ import { lazy, Suspense } from 'react'
 import { Controls } from './components/Controls'
 import { DetailPanel } from './components/DetailPanel'
 import { FlatMap } from './components/FlatMap'
+import { Lessons } from './components/Lessons'
 import { ListView } from './components/ListView'
 import { PlayTicker } from './components/PlayTicker'
+import { PrintSummary } from './components/PrintSummary'
 import { SourcesModal } from './components/SourcesModal'
 import { Timeline } from './components/Timeline'
+import './print.css'
 import { hasWebGL } from './state/capabilities'
 import { useAppStore } from './state/appStore'
 
@@ -29,6 +32,7 @@ export default function AtlasShell() {
       >
         Skip to list / 跳至列表
       </button>
+      <PrintSummary />
       <PlayTicker />
       <Controls />
       <main className="stage">
@@ -42,6 +46,7 @@ export default function AtlasShell() {
           <FlatMap />
         )}
         <div className="side">
+          <Lessons />
           <Timeline />
           <DetailPanel />
         </div>

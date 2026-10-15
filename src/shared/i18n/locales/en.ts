@@ -158,6 +158,7 @@ const enSource = {
   colEvidence: 'Evidence',
   colDate: 'Date',
   colTitle: 'Title',
+  lessons: 'Lessons',
 } as const
 
 export type MessageKey = keyof typeof enSource

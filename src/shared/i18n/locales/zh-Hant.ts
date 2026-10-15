@@ -148,4 +148,5 @@ export const zhHant = {
   colEvidence: '證據',
   colDate: '日期',
   colTitle: '標題',
+  lessons: '課堂停靠',
 } satisfies typeof en
