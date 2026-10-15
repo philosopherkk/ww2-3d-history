@@ -15,6 +15,9 @@ import {
 } from '../data/selectors'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { buildEarthTexture } from '../geo/earthMap'
+import { resolveLocalized } from '../data/localize'
+import { useLocale } from '../shared/i18n/useLocale'
+import { useT } from '../shared/i18n/translate'
 import { useAppStore } from '../state/appStore'
 import type { Country, Incident } from '../data/types'
 
@@ -82,10 +85,11 @@ function MarkerLabel({
   lines: string[]
   kind: 'country' | 'incident'
 }) {
+  const t = useT()
   return (
     <div className={`globe-label globe-label--${kind}`}>
       <div className="globe-label-kind">
-        {kind === 'country' ? 'Country / entity pin' : 'Critical incident'}
+        {kind === 'country' ? t('countryPinKind') : t('incidentPinKind')}
       </div>
       <strong>{title}</strong>
       {lines.map((l) => (
@@ -101,6 +105,7 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
   const hovered = useAppStore((s) => s.hoveredCountryId === country.id)
   const selectCountry = useAppStore((s) => s.selectCountry)
   const setHoveredCountry = useAppStore((s) => s.setHoveredCountry)
+  const locale = useLocale((s) => s.locale)
   const time = useAppStore((s) => s.time)
   const point = metricAtYear(country, metric, year)
   const max = maxMetricValue(metric, year)
@@ -186,7 +191,7 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
         >
           <MarkerLabel
             kind="country"
-            title={country.name}
+            title={resolveLocalized(country.name, locale).text}
             lines={[
               dateLabelFromFraction(time),
               involvementLabel(country.involvement),
@@ -204,6 +209,8 @@ function IncidentMarker({ incident }: { incident: Incident }) {
   const hovered = useAppStore((s) => s.hoveredIncidentId === incident.id)
   const selectIncident = useAppStore((s) => s.selectIncident)
   const setHoveredIncident = useAppStore((s) => s.setHoveredIncident)
+  const t = useT()
+  const locale = useLocale((s) => s.locale)
   const time = useAppStore((s) => s.time)
   const pose = useMemo(
     () => surfacePose(incident.lat, incident.lon, R + INCIDENT_EPS),
@@ -267,11 +274,11 @@ function IncidentMarker({ incident }: { incident: Incident }) {
         >
           <MarkerLabel
             kind="incident"
-            title={incident.title}
+            title={resolveLocalized(incident.title, locale).text}
             lines={[
               incident.date,
-              `Scrubber · ${dateLabelFromFraction(time)}`,
-              'Incident pin on surface (not a metric stick)',
+              t('scrubberLine', { date: dateLabelFromFraction(time) }),
+              t('incidentSurfaceHint'),
             ]}
           />
         </Html>
@@ -316,6 +323,8 @@ function SceneContent() {
 }
 
 function SelectionHud() {
+  const t = useT()
+  const locale = useLocale((s) => s.locale)
   const time = useAppStore((s) => s.time)
   const countryId = useAppStore((s) => s.selectedCountryId)
   const incidentId = useAppStore((s) => s.selectedIncidentId)
@@ -337,13 +346,11 @@ function SelectionHud() {
       <div className="globe-hud-stack">
         <div className="globe-hud">{dateLabelFromFraction(time)}</div>
         <div className="globe-legend">
-          <span className="leg leg-country">● Country pin (on surface)</span>
-          <span className="leg leg-incident">◆ Incident pin (on surface)</span>
-          <span className="leg">Amber = unsure metric</span>
+          <span className="leg leg-country">{t('legCountrySurface')}</span>
+          <span className="leg leg-incident">{t('legIncidentSurface')}</span>
+          <span className="leg">{t('amberUnsure')}</span>
         </div>
-        <p className="globe-hint">
-          Optional 3D view — switch to 2D map for easier clicking. Hover or click pins.
-        </p>
+        <p className="globe-hint">{t('globeHint')}</p>
       </div>
     )
   }
@@ -351,18 +358,20 @@ function SelectionHud() {
   return (
     <div className="globe-hud-stack">
       <div className="globe-hud globe-hud--focus">
-        <span className="globe-hud-kind">{c ? 'Country / entity' : 'Incident'}</span>
-        <strong>{c?.name ?? inc?.title}</strong>
+        <span className="globe-hud-kind">{c ? t('countryEntity') : t('incidentKind')}</span>
+        <strong>
+          {c ? resolveLocalized(c.name, locale).text : inc ? resolveLocalized(inc.title, locale).text : ''}
+        </strong>
         <span>
           {dateLabelFromFraction(time)}
           {c ? ` · ${involvementLabel(c.involvement)}` : ''}
           {inc && !c ? ` · ${inc.date}` : ''}
-          {sticky ? ' · selected' : ' · hover'}
+          {sticky ? ` · ${t('selected')}` : ` · ${t('hover')}`}
         </span>
       </div>
       <div className="globe-legend">
-        <span className="leg leg-country">● Country pin</span>
-        <span className="leg leg-incident">◆ Incident pin</span>
+        <span className="leg leg-country">{t('legCountry')}</span>
+        <span className="leg leg-incident">{t('legIncident')}</span>
       </div>
     </div>
   )

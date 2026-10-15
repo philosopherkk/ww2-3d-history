@@ -8,8 +8,8 @@
   --allies: #3a7ec4;
   --axis: #c45c3a;
   --danger-soft: #c4a03a;
-  --font-display: 'Libre Baskerville', 'Palatino Linotype', Palatino, serif;
-  --font-ui: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --font-display: Palatino, 'Palatino Linotype', 'Songti TC', 'PMingLiU', serif;
+  --font-ui: system-ui, 'Segoe UI', 'PingFang TC', 'Hiragino Sans CNS', 'Microsoft JhengHei', sans-serif;
 }
 
 * {
@@ -613,6 +613,42 @@ select {
 .ghost:hover {
   color: var(--ink);
   border-color: var(--accent);
+}
+
+.locale-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: 0.45rem;
+}
+
+.locale-toggle button {
+  border: none;
+  background: transparent;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.15rem 0.1rem;
+}
+
+.locale-toggle button[aria-pressed='true'] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.en-original {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-dim);
+  margin-left: 0.2rem;
 }
 
 .metric-value {

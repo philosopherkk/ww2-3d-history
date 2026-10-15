@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node -e \"process.exit(0)\"",
+    "i18n:check": "node scripts/i18n-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

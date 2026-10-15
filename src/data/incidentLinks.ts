@@ -4,6 +4,8 @@
  * Grokipedia: use /page/Slug when confident; else search (labeled unsure).
  */
 
+import { enOf } from '../shared/i18n/pickText'
+import type { LocalizedText } from '../shared/i18n/types'
 import type { Certainty } from './types'
 import {
   grokPageLink,
@@ -154,11 +156,12 @@ const SPECS: Record<string, IncidentLinkSpec> = {
 
 export function incidentExternalLinks(
   incidentId: string,
-  incidentTitle: string,
+  incidentTitle: LocalizedText | string,
 ): ExternalLink[] {
+  const title = enOf(incidentTitle)
   const spec = SPECS[incidentId]
   if (!spec) {
-    return [wikiLink(incidentTitle, 'unsure'), grokSearchLink(incidentTitle)]
+    return [wikiLink(title, 'unsure'), grokSearchLink(title)]
   }
   const links: ExternalLink[] = [
     wikiLink(spec.wikipediaTitle, spec.wikiCertainty ?? 'certain'),
