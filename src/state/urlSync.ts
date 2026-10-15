@@ -58,7 +58,7 @@ const fields: { [K in keyof AtlasQuery]: FieldCodec<AtlasQuery[K]> } = {
   },
   level: {
     ...oneOf(LEVELS),
-    serialize: (value) => (value === 'standard' ? null : value),
+    serialize: (value) => (value === 'overview' ? null : value),
   },
   lang: {
     parse: (raw) => (raw === 'zh-Hant' || raw === 'en' ? raw : undefined),
@@ -113,7 +113,7 @@ export function applyUrlToStore() {
   useAppStore.setState({
     time: parsed.t ?? DEFAULT_T,
     metric: parsed.layers ?? 'economicPower',
-    detail: parsed.level ?? 'standard',
+    detail: parsed.level ?? 'overview',
     view: parsed.view ?? 'map',
   })
   applySelection(parsed.sel)

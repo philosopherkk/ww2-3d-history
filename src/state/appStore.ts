@@ -32,7 +32,7 @@ export const useAppStore = create<AppState>((set) => ({
   time: 0.18, // ~Sep 1939
   playing: false,
   metric: 'economicPower',
-  detail: 'standard',
+  detail: 'overview',
   view: 'map',
   selectedCountryId: null,
   selectedIncidentId: null,

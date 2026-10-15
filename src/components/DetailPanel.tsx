@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { incidentIsGraphic } from '../data/graphicContent'
 import { adaptIncident, adaptMetricPoint, adaptPerson, metricStoredUnsure } from '../data/evidenceAdapt'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { incidentExternalLinks } from '../data/incidentLinks'
@@ -23,6 +24,7 @@ import {
 } from '../data/selectors'
 import type { DetailLevel, MetricKey } from '../data/types'
 import { formatNumber } from '../shared/i18n/format'
+import type { LocalizedText } from '../shared/i18n/types'
 import { useT } from '../shared/i18n/translate'
 import type { Measured } from '../shared/evidence/types'
 import { EvidenceBadge, SourcePanel } from '../shared/evidence'
@@ -30,18 +32,81 @@ import { useAppStore } from '../state/appStore'
 import { Localized } from './Localized'
 import { SeriesChart } from './SeriesChart'
 
+function destinationType(link: ExternalLink): string {
+  if (link.url.includes('wikipedia.org')) return 'Wikipedia'
+  if (link.url.includes('/search')) return 'Search / 搜尋'
+  if (link.url.includes('grokipedia.com')) return 'Grokipedia'
+  return 'External / 外部網站'
+}
+
 function ExtLinks({ links }: { links: ExternalLink[] }) {
+  const ordered = [...links].sort((a, b) => {
+    const rank = (url: string) => (url.includes('wikipedia.org') ? 0 : 1)
+    return rank(a.url) - rank(b.url)
+  })
   return (
     <ul className="ext-links">
-      {links.map((l) => (
+      {ordered.map((l) => (
         <li key={l.url}>
-          <a href={l.url} target="_blank" rel="noreferrer">
+          <a href={l.url} target="_blank" rel="noopener noreferrer">
             {l.label}
           </a>
+          <span className="dest-type">{destinationType(l)}</span>
+          {l.url.includes('grokipedia.com') && (
+            <span className="ai-note">AI 生成內容，請比對 / AI-generated — compare with other sources</span>
+          )}
           {l.certainty === 'unsure' && <span className="badge">unsure</span>}
         </li>
       ))}
     </ul>
+  )
+}
+
+function IncidentBody({
+  incidentId,
+  detail,
+  summary,
+  overview,
+  extra,
+  opened,
+  onOpen,
+}: {
+  incidentId: string
+  detail: DetailLevel
+  summary: LocalizedText
+  overview: LocalizedText
+  extra: string
+  opened: boolean
+  onOpen: () => void
+}) {
+  const graphic = incidentIsGraphic(incidentId)
+  if (!graphic) {
+    return (
+      <p>
+        <Localized value={summary} />
+        {extra}
+      </p>
+    )
+  }
+  if (detail !== 'deep' || !opened) {
+    return (
+      <>
+        <p>
+          <Localized value={overview} />
+        </p>
+        {detail === 'deep' ? (
+          <button type="button" className="content-note" onClick={onOpen}>
+            內容提示：涉及戰爭暴行 / Content note: wartime atrocities
+          </button>
+        ) : null}
+      </>
+    )
+  }
+  return (
+    <p>
+      <Localized value={summary} />
+      {extra}
+    </p>
   )
 }
 
@@ -65,6 +130,7 @@ export function DetailPanel() {
   const setTime = useAppStore((s) => s.setTime)
   const setPlaying = useAppStore((s) => s.setPlaying)
   const selectionKey = `${countryId ?? ''}|${incidentId ?? ''}|${personId ?? ''}`
+  const [graphicOpen, setGraphicOpen] = useState<string | null>(null)
   const [panel, setPanel] = useState<{ key: string; measured: Measured | null }>({ key: '', measured: null })
   const evidence = panel.key === selectionKey ? panel.measured : null
   const setEvidence = (measured: Measured | null) => setPanel({ key: selectionKey, measured })
@@ -170,10 +236,15 @@ export function DetailPanel() {
         {evidence ? <SourcePanel measured={evidence} onClose={() => setEvidence(null)} /> : null}
         <p className="marker-explainer">{brief.markerExplainer}</p>
         <h3>{t('backgroundAt', { date: dateLabel })}</h3>
-        <p>
-          <Localized value={brief.summary} />
-          {brief.extra}
-        </p>
+        <IncidentBody
+          incidentId={incident.id}
+          detail={detail}
+          summary={brief.summary}
+          overview={incident.summaryOverview}
+          extra={brief.extra}
+          opened={graphicOpen === incident.id}
+          onOpen={() => setGraphicOpen(incident.id)}
+        />
         <p className="hint muted">{t('detailDeepens', { detail: detailText })}</p>
 
         <h3>{t('peopleInvolved')}</h3>
@@ -353,9 +424,13 @@ export function DetailPanel() {
                   {inc.certainty === 'unsure' && <span className="badge">unsure</span>}
                   <span className="related-ext">
                     {ext.map((l) => (
-                      <a key={l.url} href={l.url} target="_blank" rel="noreferrer">
+                      <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer">
                         {l.label}
+                        <span className="dest-type"> ({destinationType(l)})</span>
                         {l.certainty === 'unsure' ? ' ?' : ''}
+                        {l.url.includes('grokipedia.com')
+                          ? ' — AI 生成內容，請比對 / AI-generated — compare with other sources'
+                          : ''}
                       </a>
                     ))}
                   </span>

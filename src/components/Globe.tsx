@@ -389,6 +389,7 @@ export function Globe() {
         <color attach="background" args={['#0b1220']} />
         <SceneContent />
       </Canvas>
+      <p className="border-notice">Modern borders shown / 顯示為現代國界</p>
       <SelectionHud />
     </div>
   )

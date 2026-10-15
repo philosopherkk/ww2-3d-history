@@ -706,6 +706,48 @@ select {
   color: var(--ink-dim);
 }
 
+.border-notice {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.7rem;
+  z-index: 3;
+  margin: 0;
+  padding: 0.25rem 0.45rem;
+  background: rgba(10, 16, 28, 0.78);
+  border: 1px solid var(--line);
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+  pointer-events: none;
+}
+
+.list-stub .border-notice {
+  position: static;
+}
+
+.content-note {
+  display: block;
+  margin: 0.4rem 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba(196, 160, 58, 0.7);
+  background: rgba(196, 160, 58, 0.08);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dest-type,
+.ai-note {
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+}
+
+.ai-note {
+  display: block;
+  margin-top: 0.15rem;
+}
+
 .metric-value {
   font-size: 1.05rem;
 }

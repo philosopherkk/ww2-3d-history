@@ -34,7 +34,7 @@ export function SourcesModal() {
               {s.url && (
                 <>
                   {' '}
-                  <a href={s.url} target="_blank" rel="noreferrer">
+                  <a href={s.url} target="_blank" rel="noopener noreferrer">
                     {t('link')}
                   </a>
                 </>

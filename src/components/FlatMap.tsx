@@ -198,6 +198,7 @@ export function FlatMap() {
         </div>
       </div>
 
+      <p className="border-notice">Modern borders shown / 顯示為現代國界</p>
       <div className="globe-hud-stack flat-hud">
         <div className={`globe-hud ${focusC || focusI ? 'globe-hud--focus' : ''}`}>
           {focusC || focusI ? (

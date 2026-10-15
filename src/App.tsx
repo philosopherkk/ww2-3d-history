@@ -13,6 +13,7 @@ function ListStub() {
   const t = useT()
   return (
     <div className="flat-map-wrap list-stub">
+      <p className="border-notice">Modern borders shown / 顯示為現代國界</p>
       <p>{t('listStub')}</p>
     </div>
   )
