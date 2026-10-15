@@ -12,8 +12,9 @@ import type {
   MetricPoint,
   Side,
 } from './types'
+import { formatYearMonth, parseYearMonth } from './buildSeries'
+import { END, START, yearFromFraction as fractionToYear } from './timeScale'
 import { ww2Dataset } from './ww2Dataset'
-import { formatYearMonth } from './buildSeries'
 
 const DETAIL_RANK: Record<DetailLevel, number> = {
   overview: 0,
@@ -42,9 +43,22 @@ const SIDE_KEY: Record<Side, MessageKey> = {
 const MAX_METRIC_GAP = 5 / 12
 
 export function yearFromFraction(t: number): number {
-  const start = 1937 + 6 / 12
-  const end = 1945 + 8 / 12
-  return start + t * (end - start)
+  return fractionToYear(t)
+}
+
+export function alignmentAt(
+  country: Country,
+  t: number,
+): { side: Side; involvement: Involvement } {
+  const year = yearFromFraction(t)
+  const segments = country.alignment?.length
+    ? country.alignment
+    : [{ from: '1937-07', side: country.side, involvement: country.involvement }]
+  let current = segments[0]
+  for (const seg of segments) {
+    if (parseYearMonth(seg.from) <= year + 1e-9) current = seg
+  }
+  return { side: current.side, involvement: current.involvement }
 }
 
 export function dateLabelFromFraction(time: number): string {
@@ -215,11 +229,15 @@ export function countryBriefing(
   year: number,
   metric: MetricKey,
   dateLabel: string,
+  timeFraction?: number,
 ): CountryBriefing {
   const point = metricAtYear(country, metric, year)
   const markerExplainer = t('markerCountry')
 
-  const statusLine = `${involvementLabel(country.involvement)} · ${sideLabel(country.side)} · ${dateLabel}`
+  const tFrac =
+    timeFraction ?? Math.min(1, Math.max(0, (year - START) / (END - START)))
+  const { side, involvement } = alignmentAt(country, tFrac)
+  const statusLine = `${involvementLabel(involvement)} · ${sideLabel(side)} · ${dateLabel}`
 
   const related = relatedIncidentsForCountry(country, year, detail, 5)
   const relatedTitles =
@@ -231,8 +249,8 @@ export function countryBriefing(
     t('countryAt', {
       name: enOf(country.name),
       date: dateLabel,
-      involvement: involvementLabel(country.involvement).toLowerCase(),
-      side: sideLabel(country.side).toLowerCase(),
+      involvement: involvementLabel(involvement).toLowerCase(),
+      side: sideLabel(side).toLowerCase(),
     }),
     point
       ? t('metricSentence', {

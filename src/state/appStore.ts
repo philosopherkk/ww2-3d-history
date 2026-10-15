@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { DEFAULT_T } from '../data/timeScale'
 import type { DetailLevel, MetricKey } from '../data/types'
 
 export type AtlasView = 'map' | 'globe' | 'list'
@@ -29,7 +30,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  time: 0.18, // ~Sep 1939
+  time: DEFAULT_T,
   playing: false,
   metric: 'economicPower',
   detail: 'overview',
@@ -59,7 +60,13 @@ export const useAppStore = create<AppState>((set) => ({
       selectedPersonId: null,
       playing: false,
     }),
-  selectPerson: (selectedPersonId) => set({ selectedPersonId, playing: false }),
+  selectPerson: (selectedPersonId) =>
+    set({
+      selectedPersonId,
+      selectedCountryId: null,
+      selectedIncidentId: null,
+      playing: false,
+    }),
   setHoveredCountry: (hoveredCountryId) => set({ hoveredCountryId }),
   setHoveredIncident: (hoveredIncidentId) => set({ hoveredIncidentId }),
   setShowSources: (showSources) => set({ showSources }),

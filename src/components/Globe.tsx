@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Stars, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import {
+  alignmentAt,
   countriesActiveAt,
   dateLabelFromFraction,
   incidentsVisible,
@@ -10,9 +11,11 @@ import {
   latLonToVec3,
   maxMetricValue,
   metricAtYear,
-  pointStamp,
   yearFromFraction,
 } from '../data/selectors'
+import type { Side } from '../data/types'
+import { BorderNotice } from './BorderNotice'
+import { MetricEvidenceLine } from './MetricEvidenceLine'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { buildEarthTexture } from '../geo/earthMap'
 import { resolveLocalized } from '../data/localize'
@@ -26,6 +29,13 @@ const R = 2.2
 const SURFACE_EPS = 0.012
 const INCIDENT_EPS = 0.018
 
+function sideColor(side: Side, unsure: boolean): string {
+  if (unsure) return '#c4a03a'
+  if (side === 'axis') return '#c45c3a'
+  if (side === 'allies') return '#3a7ec4'
+  return '#8a8a6a'
+}
+
 function surfacePose(lat: number, lon: number, radius: number) {
   const [x, y, z] = latLonToVec3(lat, lon, radius)
   const dir = new THREE.Vector3(x, y, z).normalize()
@@ -35,28 +45,45 @@ function surfacePose(lat: number, lon: number, radius: number) {
 
 function Earth() {
   const [map, setMap] = useState<THREE.Texture | null>(null)
+  const [mapError, setMapError] = useState(false)
+  const mapRef = useRef<THREE.Texture | null>(null)
 
   useEffect(() => {
     let alive = true
     buildEarthTexture(2048)
       .then((tex) => {
-        if (alive) setMap(tex)
+        if (!alive) {
+          tex.dispose()
+          return
+        }
+        mapRef.current = tex
+        setMap(tex)
       })
-      .catch((err) => console.warn(err))
+      .catch((err) => {
+        console.warn(err)
+        if (alive) setMapError(true)
+      })
     return () => {
       alive = false
+      mapRef.current?.dispose()
+      mapRef.current = null
     }
   }, [])
 
   return (
     <mesh>
-      <sphereGeometry args={[R, 128, 128]} />
+      <sphereGeometry args={[R, 64, 64]} />
       <meshStandardMaterial
         map={map ?? undefined}
-        color={map ? '#ffffff' : '#1a3a52'}
+        color={map ? '#ffffff' : mapError ? '#3a1010' : '#1a3a52'}
         roughness={0.9}
         metalness={0.04}
       />
+      {mapError && (
+        <Html center>
+          <span className="globe-texture-error">Basemap failed to load</span>
+        </Html>
+      )}
     </mesh>
   )
 }
@@ -119,9 +146,9 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
 
   const t = Math.min(1, point.value / max)
   const pinR = 0.026 + t * 0.032
-  const color =
-    country.side === 'axis' ? '#c45c3a' : country.side === 'allies' ? '#3a7ec4' : '#8a8a6a'
+  const { side, involvement } = alignmentAt(country, time)
   const unsure = point.certainty === 'unsure'
+  const color = sideColor(side, unsure)
   const estimatedPoint = point.provenance === 'interpolated' || point.provenance === 'held'
   const showLabel = selected || hovered
   const accent = unsure ? '#c4a03a' : color
@@ -140,7 +167,7 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
           setHoveredCountry(country.id)
         }}
         onPointerOut={() => {
-          document.body.style.cursor = 'default'
+          document.body.style.cursor = ''
           setHoveredCountry(null)
         }}
       >
@@ -197,10 +224,19 @@ function CountryMarker({ country, year }: { country: Country; year: number }) {
             title={resolveLocalized(country.name, locale).text}
             lines={[
               dateLabelFromFraction(time),
-              involvementLabel(country.involvement),
-              `${point.value} ${point.unit} · ${pointStamp(point)} · ${point.certainty}`,
+              involvementLabel(involvement),
             ]}
           />
+        </Html>
+      )}
+      {showLabel && (
+        <Html
+          distanceFactor={7.5}
+          position={[0, pinR * 3.4, 0.04]}
+          style={{ pointerEvents: 'none' }}
+          zIndexRange={[19, 0]}
+        >
+          <MetricEvidenceLine point={point} country={country} metric={metric} />
         </Html>
       )}
     </group>
@@ -235,7 +271,7 @@ function IncidentMarker({ incident }: { incident: Incident }) {
           setHoveredIncident(incident.id)
         }}
         onPointerOut={() => {
-          document.body.style.cursor = 'default'
+          document.body.style.cursor = ''
           setHoveredIncident(null)
         }}
       >
@@ -297,8 +333,8 @@ function SceneContent() {
   const detail = useAppStore((s) => s.detail)
   const year = yearFromFraction(time)
   const metric = useAppStore((s) => s.metric)
-  const incidents = incidentsVisible(detail, year)
-  const active = countriesActiveAt(year, metric)
+  const incidents = useMemo(() => incidentsVisible(detail, year), [detail, year])
+  const active = useMemo(() => countriesActiveAt(year, metric), [year, metric])
 
   return (
     <>
@@ -373,7 +409,7 @@ function SelectionHud() {
         </strong>
         <span>
           {dateLabelFromFraction(time)}
-          {c ? ` · ${involvementLabel(c.involvement)}` : ''}
+          {c ? ` · ${involvementLabel(alignmentAt(c, time).involvement)}` : ''}
           {inc && !c ? ` · ${inc.date}` : ''}
           {sticky ? ` · ${t('selected')}` : ` · ${t('hover')}`}
         </span>
@@ -387,13 +423,19 @@ function SelectionHud() {
 }
 
 export function Globe() {
+  const t = useT()
   return (
     <div className="globe-wrap">
-      <Canvas camera={{ position: [0, 1.2, 5.2], fov: 42 }} dpr={[1, 1.5]}>
+      <Canvas
+        camera={{ position: [0, 1.2, 5.2], fov: 42 }}
+        dpr={[1, 1.5]}
+        frameloop="demand"
+        aria-label={t('mapAlt')}
+      >
         <color attach="background" args={['#0b1220']} />
         <SceneContent />
       </Canvas>
-      <p className="border-notice">Modern borders shown / 顯示為現代國界</p>
+      <BorderNotice />
       <SelectionHud />
     </div>
   )

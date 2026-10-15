@@ -25,8 +25,9 @@ export function adaptMetricPoint(point: MetricPoint, metric: MetricKey): Measure
   if (interpolated) level = 'estimated'
   else if (point.certainty === 'unsure') level = 'unsure'
   else if (point.certainty === 'approximate') level = 'estimated'
-  else if (point.certainty === 'certain') level = 'sourced'
-  else level = 'unverified'
+  else if (point.certainty === 'certain') {
+    level = point.sourceIds?.length ? 'sourced' : 'unverified'
+  } else level = 'unverified'
 
   // TODO(data): needs source — anchors do not store a last-reviewed date
   return {

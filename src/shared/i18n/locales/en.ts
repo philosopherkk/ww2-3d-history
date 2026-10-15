@@ -159,6 +159,17 @@ const enSource = {
   colDate: 'Date',
   colTitle: 'Title',
   lessons: 'Lessons',
+  borderNotice: 'Modern borders shown — basemap uses today’s outlines, not 1939–45 frontiers.',
+  noData: 'No data',
+  atlasError: 'The atlas could not load. Try reloading or open the list view.',
+  globeError: 'The 3D globe failed. Switch to the flat map or reload.',
+  reloadPage: 'Reload page',
+  switchToMap: 'Switch to 2D map',
+  openListView: 'Open list view',
+  bootLoading: 'Loading atlas…',
+  loadingGlobe: 'Loading globe…',
+  sourcesFooter: 'Sources and data notes',
+  sourcesFooterHint: 'Figures are educational estimates, not certified statistics.',
 } as const
 
 export type MessageKey = keyof typeof enSource

@@ -7,6 +7,8 @@ import { countrySpecSchema, incidentSchema, personSchema } from './schema'
 import type { MetricKey } from './types'
 import { ww2Dataset } from './ww2Dataset'
 
+const catalogIds = new Set(ww2Dataset.sources.map((s) => s.id))
+
 describe('schema', () => {
   it('passes every incident, country, and person', () => {
     for (const incident of incidents) {
@@ -24,6 +26,21 @@ describe('schema', () => {
 })
 
 describe('evidence display', () => {
+  it('requires resolvable sourceIds on certain anchors in roster', () => {
+    for (const spec of countrySpecs) {
+      for (const anchors of Object.values(spec.anchors)) {
+        if (!anchors) continue
+        for (const anchor of anchors) {
+          if (anchor.certainty !== 'certain') continue
+          expect(anchor.sourceIds?.length ?? 0).toBeGreaterThan(0)
+          for (const id of anchor.sourceIds ?? []) {
+            expect(catalogIds.has(id)).toBe(true)
+          }
+        }
+      }
+    }
+  })
+
   it('never displays interpolated or held points as sourced', () => {
     const metrics = Object.keys(ww2Dataset.metricLabels) as MetricKey[]
     let checked = 0

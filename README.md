@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Open the printed local URL (usually `http://localhost:5173`).
+Open the URL Vite prints (with `base` set, use `http://localhost:5173/ww2-3d-history/`).
 
 ```bash
 npm test
@@ -26,7 +26,7 @@ npm run i18n:check
 
 ## Deploy (GitHub Pages)
 
-`vite.config.ts` sets `base` to `/ww2-3d-history/` for the project site. `.github/workflows/deploy-pages.yml` runs `npm test` before `npm run build` and publishes `dist` on pushes to `main`.
+`vite.config.ts` sets `base` from `VITE_BASE` (default `/ww2-3d-history/`) for the project site. `.github/workflows/deploy-pages.yml` runs `npm test` before `npm run build` and publishes `dist` on pushes to `main`.
 
 ## Evidence levels
 

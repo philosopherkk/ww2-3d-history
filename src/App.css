@@ -750,6 +750,22 @@ select {
   color: var(--ink-dim);
 }
 
+.error-fallback {
+  padding: 2rem;
+  max-width: 36rem;
+  margin: 2rem auto;
+  background: #1a2438;
+  border: 1px solid #3a4a68;
+  border-radius: 8px;
+}
+
+.error-fallback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .skip-link {
   position: absolute;
   left: 0.6rem;

@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { resolveLocalized } from '../data/localize'
 import {
+  alignmentAt,
   countriesActiveAt,
   dateLabelFromFraction,
   incidentsVisible,
   involvementLabel,
   maxMetricValue,
   metricAtYear,
-  pointStamp,
   yearFromFraction,
 } from '../data/selectors'
+import type { Side } from '../data/types'
+import { BorderNotice } from './BorderNotice'
+import { MetricEvidenceLine } from './MetricEvidenceLine'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { buildEarthCanvas, lonLatToMapFraction } from '../geo/earthMap'
 import { useLocale } from '../shared/i18n/useLocale'
@@ -17,6 +20,13 @@ import { useT } from '../shared/i18n/translate'
 import { useAppStore } from '../state/appStore'
 
 type View = { x: number; y: number; scale: number }
+
+function sideColor(side: Side, unsure: boolean): string {
+  if (unsure) return '#c4a03a'
+  if (side === 'axis') return '#c45c3a'
+  if (side === 'allies') return '#3a7ec4'
+  return '#8a8a6a'
+}
 
 export function FlatMap() {
   const t = useT()
@@ -34,9 +44,9 @@ export function FlatMap() {
   const setHoveredIncident = useAppStore((s) => s.setHoveredIncident)
 
   const year = yearFromFraction(time)
-  const active = countriesActiveAt(year, metric)
-  const incidents = incidentsVisible(detail, year)
-  const max = maxMetricValue(metric, year)
+  const active = useMemo(() => countriesActiveAt(year, metric), [year, metric])
+  const incidents = useMemo(() => incidentsVisible(detail, year), [detail, year])
+  const max = useMemo(() => maxMetricValue(metric, year), [year, metric])
 
   const [mapUrl, setMapUrl] = useState<string | null>(null)
   const [view, setView] = useState<View>({ x: 0, y: 0, scale: 1 })
@@ -104,12 +114,17 @@ export function FlatMap() {
     ? ww2Dataset.incidents.find((i) => i.id === focusIncident)
     : null
 
-  const pins = active.map((c) => {
-    const point = metricAtYear(c, metric, year)!
-    const sizeT = Math.min(1, point.value / max)
-    const { x, y } = lonLatToMapFraction(c.lon, c.lat)
-    return { c, point, sizeT, x, y }
-  })
+  const pins = useMemo(
+    () =>
+      active.map((c) => {
+        const point = metricAtYear(c, metric, year)!
+        const sizeT = Math.min(1, point.value / max)
+        const { x, y } = lonLatToMapFraction(c.lon, c.lat)
+        const { side } = alignmentAt(c, time)
+        return { c, point, sizeT, x, y, side }
+      }),
+    [active, metric, year, max, time],
+  )
 
   return (
     <div className="flat-map-wrap">
@@ -135,18 +150,11 @@ export function FlatMap() {
           )}
 
           <div className="flat-map-pins">
-            {pins.map(({ c, point, sizeT, x, y }) => {
+            {pins.map(({ c, point, sizeT, x, y, side }) => {
               const selected = selectedCountryId === c.id
               const hovered = hoveredCountryId === c.id
               const unsure = point.certainty === 'unsure'
-              const color =
-                unsure
-                  ? '#c4a03a'
-                  : c.side === 'axis'
-                    ? '#c45c3a'
-                    : c.side === 'allies'
-                      ? '#3a7ec4'
-                      : '#8a8a6a'
+              const color = sideColor(side, unsure)
               const size = 8 + sizeT * 14
               return (
                 <button
@@ -198,7 +206,7 @@ export function FlatMap() {
         </div>
       </div>
 
-      <p className="border-notice">Modern borders shown / 顯示為現代國界</p>
+      <BorderNotice />
       <div className="globe-hud-stack flat-hud">
         <div className={`globe-hud ${focusC || focusI ? 'globe-hud--focus' : ''}`}>
           {focusC || focusI ? (
@@ -213,7 +221,7 @@ export function FlatMap() {
               </strong>
               <span>
                 {dateLabelFromFraction(time)}
-                {focusC ? ` · ${involvementLabel(focusC.involvement)}` : ''}
+                {focusC ? ` · ${involvementLabel(alignmentAt(focusC, time).involvement)}` : ''}
                 {focusI && !focusC ? ` · ${focusI.date}` : ''}
                 {selectedCountryId || selectedIncidentId ? ` · ${t('selected')}` : ` · ${t('hover')}`}
               </span>
@@ -221,9 +229,7 @@ export function FlatMap() {
                 (() => {
                   const p = metricAtYear(focusC, metric, year)
                   return p ? (
-                    <span>
-                      {p.value} {p.unit} · {pointStamp(p)} · {p.certainty}
-                    </span>
+                    <MetricEvidenceLine point={p} country={focusC} metric={metric} />
                   ) : null
                 })()}
             </>
