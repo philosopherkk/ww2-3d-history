@@ -1,7 +1,8 @@
 import { adaptIncident } from '../data/evidenceAdapt'
+import { incidentsVisible, yearFromFraction } from '../data/selectors'
+import { tFromDate } from '../data/timeScale'
 import { EvidenceBadge } from '../shared/evidence'
 import { Localized } from './Localized'
-import { incidentsVisible, yearFromFraction } from '../data/selectors'
 import { useT } from '../shared/i18n/translate'
 import { useAppStore } from '../state/appStore'
 
@@ -32,11 +33,8 @@ export function Timeline() {
                 className={`incident-btn ${selected ? 'selected' : ''} ${reached ? 'reached' : 'future'}`}
                 onClick={() => {
                   selectIncident(inc.id)
-                  const start = 1937 + 6 / 12
-                  const end = 1945 + 8 / 12
-                  const y = inc.year + (inc.month - 1) / 12
                   setPlaying(false)
-                  setTime(Math.min(1, Math.max(0, (y - start) / (end - start))))
+                  setTime(tFromDate(inc.year, inc.month))
                 }}
               >
                 <span className="inc-date">{inc.date}</span>

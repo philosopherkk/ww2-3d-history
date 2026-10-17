@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
+import { tFromDate } from '../data/timeScale'
 import { useAppStore } from '../state/appStore'
 
-const START = 1937 + 6 / 12
-const END = 1945 + 8 / 12
-const MONTH = 1 / 12 / (END - START)
+/** Shift+arrow moves one calendar month of the shared atlas span. */
+const MONTH = tFromDate(1938, 2) - tFromDate(1938, 1)
 const STEP = 0.001
 
 /** ←/→ one scrub step, Shift+←/→ one month, Enter selects the hover, Esc closes panels. */

@@ -1,5 +1,14 @@
+/// <reference types="node" />
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_T, dateFromT, tFromDate, tFromIsoDate } from './timeScale'
+
+const PRIVATE_END_FILES = [
+  'src/components/Timeline.tsx',
+  'src/components/Keybindings.tsx',
+  'src/components/DetailPanel.tsx',
+]
 
 describe('timeScale', () => {
   it('default time is September 1939', () => {
@@ -18,5 +27,17 @@ describe('timeScale', () => {
     const t = tFromDate(1939, 9, 1)
     expect(dateFromT(t).year).toBe(1939)
     expect(dateFromT(t).month).toBe(9)
+  })
+
+  it('fails when Timeline, Keybindings, or DetailPanel keep a private end', () => {
+    const needle = '1945 + 8 / 12'
+    const offenders = PRIVATE_END_FILES.filter((file) => readFileSync(resolve(file), 'utf8').includes(needle))
+    expect(offenders).toEqual([])
+  })
+
+  it('maps incident clicks and the month step through tFromDate', () => {
+    for (const file of PRIVATE_END_FILES) {
+      expect(readFileSync(resolve(file), 'utf8')).toContain('tFromDate(')
+    }
   })
 })
