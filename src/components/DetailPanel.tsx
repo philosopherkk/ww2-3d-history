@@ -3,6 +3,7 @@ import { incidentIsGraphic } from '../data/graphicContent'
 import { adaptIncident, adaptMetricPoint, adaptPerson, metricStoredUnsure } from '../data/evidenceAdapt'
 import { ww2Dataset } from '../data/ww2Dataset'
 import { incidentExternalLinks } from '../data/incidentLinks'
+import { tFromDate } from '../data/timeScale'
 import {
   getPerson,
   peopleForCountry,
@@ -427,12 +428,9 @@ export function DetailPanel() {
                     type="button"
                     className="linkish"
                     onClick={() => {
-                      const start = 1937 + 6 / 12
-                      const end = 1945 + 8 / 12
-                      const y = inc.year + (inc.month - 1) / 12
                       setPlaying(false)
                       selectIncident(inc.id)
-                      setTime(Math.min(1, Math.max(0, (y - start) / (end - start))))
+                      setTime(tFromDate(inc.year, inc.month))
                     }}
                   >
                     {inc.date} — <Localized value={inc.title} />
